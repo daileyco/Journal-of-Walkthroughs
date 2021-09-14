@@ -1,9 +1,10 @@
 ---
-title: <center><figure><img src=images/jow_logo.png alt="Journal of Walkthroughs"><figcaption>Journal of Walkthroughs</figcation></figure></center>
+title: Journal of Walkthroughs
+subtitle: <center><figure><img src=images/jow_logo.png alt="Journal of Walkthroughs"></figure></center>
 output: 
   html_document:
     pandoc_args: [
-      "--metadata=pagetitle[:Journal of Walkthroughs]"
+      "--metadata=title[:Journal of Walkthroughs]"
       ]
 ---
 

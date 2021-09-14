@@ -14,6 +14,18 @@ a4ac86 sage
 */
 
 
+@import url('https://fonts.googleapis.com/css2?family=Mansalva&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
+
+
+.title {
+  text-align: -webkit-center;
+  font-family: 'Mansalva';
+}
+
+.body {
+  font-family: 'Montserrat';
+}
 
 .navbar-default {
   background-color: #C2C5AA;
