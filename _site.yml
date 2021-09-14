@@ -1,0 +1,14 @@
+name: "Journal of Walkthroughs"
+output_dir: "docs"
+exclude: ["00-scripts_to_process"]
+output:
+  html_document:
+    theme: journal
+    highlight: default
+    toc: true
+    toc_depth: 2
+    toc_float: 
+      collapsed: false
+    includes:
+      in_header: include_head.html
+    css: jow.css

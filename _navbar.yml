@@ -1,0 +1,63 @@
+title: <img src=images/jow_logo_cropped.png width=auto height=61 vertical-align="middle">
+logo:
+    image: images/jow_logo.png
+    href: https://daileyco.github.io/Journal-of-Walkthroughs/
+left:
+  - text: "About"
+    href: ./About.html
+  - text: "By Skill Level"
+    menu:
+      - text: "Beginner"
+        menu:
+          - text: "To Come"
+      - text: "Intermediate"
+        menu:
+          - text: "To Come"
+      - text: "Advanced"
+        menu:
+          - text: "To Come"
+  - text: "By Topic"
+    menu:
+      - text: "Data Analysis"
+        menu:
+          - text: "To Come"
+      - text: "Data Visualization"
+        menu:
+          - text: "Tables"
+            menu:
+              - text: "Table 1"
+              - text: "Publication-quality Tables"
+          - text: "Figures"
+            menu:
+              - text: "Plotting in Base R"
+              - text: "Arranging Multiple Figures"
+              - text: "Fine-tuning Axes"
+              - text: "Adding Text"
+          - text: "Interactive"
+            menu:
+              - text: "Shiny Data Tables"
+              - text: "Plotly"
+              - text: "Sankey Diagrams"
+      - text: "TBD"
+        menu:
+          - text: "To Come"
+  - text: "By Coding Language"
+    menu:
+      - text: "R/RStudio"
+        menu:
+          - text: "To Come"
+      - text: "SAS"
+        menu: 
+          - text: "To Come"
+      - text: "GAML"
+        menu:
+          - text: "To Come"
+      - text: "HTML"
+        menu: 
+          - text: "To Come"
+      - text: "CSS"
+        menu:
+          - text: "To Come"
+right:
+  - icon: fab fa-github
+    href: https://github.com/daileyco/Journal-of-Walkthroughs

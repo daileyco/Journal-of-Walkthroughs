@@ -1,0 +1,109 @@
+/*
+
+582f0e seal brown
+7f4f24 russet
+936639 coyote brown
+a68a64 camel
+b6ad90 khaki web
+c2c5aa laurel green
+a4ac86 sage
+656d4a dark olive green
+414833 rifle green
+333d29 kombu green
+
+*/
+
+
+
+.navbar-default {
+  background-color: #C2C5AA;
+  border-color: #333D29;
+}
+
+
+
+
+.navbar-default .navbar-brand:hover,
+.navbar-default .navbar-brand:focus {
+  color: #000000;
+  background-color: #C2C5AA;
+}
+
+.navbar-brand {
+  float: left;
+  height: 60px;
+  padding: 0;
+  font-size: 19px;
+  line-height: 21px;
+}
+
+
+
+
+
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-nav > li > a:focus {
+  color: #C2C5AA;
+  background-color: #333D29;
+}
+
+
+.navbar-default .navbar-nav > .open > a,
+.navbar-default .navbar-nav > .open > a:hover,
+.navbar-default .navbar-nav > .open > a:focus {
+  color: #C2C5AA;
+  background-color: #333D29;
+}
+
+.dropdown-menu > li > a {
+  display: block;
+  padding: 3px 20px;
+  clear: both;
+  font-weight: 400;
+  line-height: 1.42857143;
+  color: #333D29;
+  white-space: nowrap;
+}
+.dropdown-menu > li > a:hover,
+.dropdown-menu > li > a:focus {
+  color: #333D29;
+  text-decoration: none;
+  background-color: #C2C5AA;
+}
+.dropdown-menu > .active > a,
+.dropdown-menu > .active > a:hover,
+.dropdown-menu > .active > a:focus {
+  color: #333D29;
+  text-decoration: none;
+  background-color: #C2C5AA;
+  outline: 0;
+}
+
+
+
+
+
+.list-group-item.active,
+.list-group-item.active:hover,
+.list-group-item.active:focus {
+  z-index: 2;
+  color: #333D29;
+  background-color: #C2C5AA;
+  border-color: #C2C5AA;
+}
+
+
+
+
+
+
+
+a {
+  color: #936639;
+  text-decoration: none;
+}
+a:hover,
+a:focus {
+  color: #582F0E;
+  text-decoration: underline;
+}
