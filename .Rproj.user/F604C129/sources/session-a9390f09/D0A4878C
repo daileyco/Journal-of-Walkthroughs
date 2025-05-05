@@ -3,7 +3,7 @@
     "path": "G:/Websites/Journal-of-Walkthroughs/_quarto.yml",
     "project_path": "_quarto.yml",
     "type": "yaml",
-    "hash": "523012425",
+    "hash": "2088447109",
     "contents": "",
     "dirty": false,
     "created": 1746464480153.0,
@@ -12,15 +12,15 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "21,23",
-        "scrollLine": "9"
+        "cursorPosition": "11,62",
+        "scrollLine": "0"
     },
     "folds": "",
-    "lastKnownWriteTime": 1746469852,
+    "lastKnownWriteTime": 1746470780,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1746469852919,
+    "last_content_update": 1746470780521,
     "read_only": false,
     "read_only_alternatives": []
 }

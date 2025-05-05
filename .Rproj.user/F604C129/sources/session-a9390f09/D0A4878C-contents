@@ -9,6 +9,7 @@ project:
 website:
   title: ""
   favicon: /files/images/research.png
+  site-url: https://daileyco.github.io/Journal-of-Walkthroughs
   navbar:
     logo: /files/images/jow_logo_cropped.png
     background: "#C2C5AA"
@@ -20,6 +21,7 @@ website:
       - href: index.qmd
         text: Home
       - href: about.qmd
+        text: About
       - text: Walkthroughs
         menu: 
           - text: Beginner
