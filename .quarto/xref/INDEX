@@ -1,0 +1,17 @@
+{
+  "index.qmd": {
+    "index.html": "256c370c"
+  },
+  "about.qmd": {
+    "about.html": "9ecde3e3"
+  },
+  "files/00-scripts_to_process/01-Beginner/Non-scripts/Word Style Reference/rmd-docx-template.Rmd": {
+    "rmd-docx-template.html": "d571da55"
+  },
+  "files/00-scripts_to_process/01-Beginner/Plotting-Workshop/BaseRPlotting.Rmd": {
+    "BaseRPlotting.html": "a98e6276"
+  },
+  "files/00-scripts_to_process/01-Beginner/RMarkdown/Word Style Reference/rmd-docx-template.Rmd": {
+    "rmd-docx-template.html": "0da1877d"
+  }
+}

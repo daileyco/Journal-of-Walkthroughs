@@ -1,0 +1,107 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Journal of Walkthroughs",
+    "section": "",
+    "text": "This is the Journal of Walkthroughs, aka my version of those data science blogs you will find all over the internet / a way for me to play around with creating websites.\n\n\nCheck out About for a little more detail on what you can expect to find.\nCheck out Beginner, Intermediate, Advanced sections for the walkthroughs.\n\n\n\nIf you have a document that you think fits this general purpose / design or would like to create one, feel free to reach out to me and we can discuss adding it to the repository. If I remember, I will create a Beginner document containing information on the structuring / outline of Walkthroughs that I would like to remain consistent.\n\n\nCody Dailey (just me for now)\n\n\n\n\nIcon made by Amethyst prime from Flaticon.\nLogo created by me using FreeLogo Design.\nWithin some of the walkthroughs, I may reference out to other resources that have helped me in learning.\nStyle and approach (and starting points for some essential files, e.g., _site.yml) of website design can be attributed to Dr. Andreas Handel.\nColor palette sourced from Coolors.\nCSS modified from Journal theme.\n\n\n\nThis work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License."
+  },
+  {
+    "objectID": "index.html#content",
+    "href": "index.html#content",
+    "title": "Journal of Walkthroughs",
+    "section": "",
+    "text": "Check out About for a little more detail on what you can expect to find.\nCheck out Beginner, Intermediate, Advanced sections for the walkthroughs."
+  },
+  {
+    "objectID": "index.html#contributing",
+    "href": "index.html#contributing",
+    "title": "Journal of Walkthroughs",
+    "section": "",
+    "text": "If you have a document that you think fits this general purpose / design or would like to create one, feel free to reach out to me and we can discuss adding it to the repository. If I remember, I will create a Beginner document containing information on the structuring / outline of Walkthroughs that I would like to remain consistent.\n\n\nCody Dailey (just me for now)"
+  },
+  {
+    "objectID": "index.html#attributions",
+    "href": "index.html#attributions",
+    "title": "Journal of Walkthroughs",
+    "section": "",
+    "text": "Icon made by Amethyst prime from Flaticon.\nLogo created by me using FreeLogo Design.\nWithin some of the walkthroughs, I may reference out to other resources that have helped me in learning.\nStyle and approach (and starting points for some essential files, e.g., _site.yml) of website design can be attributed to Dr. Andreas Handel.\nColor palette sourced from Coolors.\nCSS modified from Journal theme."
+  },
+  {
+    "objectID": "index.html#license",
+    "href": "index.html#license",
+    "title": "Journal of Walkthroughs",
+    "section": "",
+    "text": "This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License."
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "My goal with this repository/webpage (aptly named Journal of Walkthroughs) is to provide a collection of general-use, reusable, and technical documentation which may help anyone in the odyssey of research. My focus will likely be on health data analysis (as my background is in Epidemiology and Biostatistics). Also, my program of choice is R, so most materials will be created using R/RStudio/RMarkdown (maybe even bookdown if necessitated by complexity). However, I hope to extend this foundation to a more comprehensive approach to research. For now, I will include several small-scale aspects which may come in handy for some. Perhaps not, only time will tell.\nTruth to the matter, this repository will help me consolidate skills and code that I have developed. In doing that, I will be able to return to these documents whenever needed in the future and have a how-to manual written by me, for me. :)\n\n\nWhile there are many resources for help in research and there is no true “one-size-fits-all” approach, there are similarities in approaches.\nParticular attention will be given to topics of data analysis and results presentation, but I may include some other topics such as: - Project conceptualization - Project management / scheduling - Literature review - Data collection - Discussion of significance and implications\nAnything that can help in any one of these aspects (or many) might be found in this collection."
+  },
+  {
+    "objectID": "about.html#overview",
+    "href": "about.html#overview",
+    "title": "About",
+    "section": "",
+    "text": "My goal with this repository/webpage (aptly named Journal of Walkthroughs) is to provide a collection of general-use, reusable, and technical documentation which may help anyone in the odyssey of research. My focus will likely be on health data analysis (as my background is in Epidemiology and Biostatistics). Also, my program of choice is R, so most materials will be created using R/RStudio/RMarkdown (maybe even bookdown if necessitated by complexity). However, I hope to extend this foundation to a more comprehensive approach to research. For now, I will include several small-scale aspects which may come in handy for some. Perhaps not, only time will tell.\nTruth to the matter, this repository will help me consolidate skills and code that I have developed. In doing that, I will be able to return to these documents whenever needed in the future and have a how-to manual written by me, for me. :)\n\n\nWhile there are many resources for help in research and there is no true “one-size-fits-all” approach, there are similarities in approaches.\nParticular attention will be given to topics of data analysis and results presentation, but I may include some other topics such as: - Project conceptualization - Project management / scheduling - Literature review - Data collection - Discussion of significance and implications\nAnything that can help in any one of these aspects (or many) might be found in this collection."
+  },
+  {
+    "objectID": "about.html#structuring",
+    "href": "about.html#structuring",
+    "title": "About",
+    "section": "Structuring",
+    "text": "Structuring\nI will attempt to section out the materials into three levels: 1. Beginner 2. Intermediate 3. Advanced\nIn general, the Beginner documents will have a single task and/or skill associated with them, while the Intermediate and Advanced materials will be built in a hierarchical fashion. That is, an Intermediate or Advanced document will likely combine two or more code-sets / tasks / skills into one cohesive document. For example, the Intermediate document Analyzing a Continuous Response Variable could contain skills / code covered in simpler Beginner documents such as Visualizing a Continuous Variable, Calculating a Correlation Coefficient, or Fitting a Simple Linear Regression Model. I will try and back-reference simpler documents, but it is possible that skills / code included in higher level materials will be more unique to task and not directly pulled from simpler documents.\nFurthermore, the structuring of the subfolders within each skill-level archive will be inherently different. For Beginner materials, I will try to partition / categorize documents appropriately, e.g., Data Visualization or Data Analysis. However, as the Intermediate and Advanced materials will combine multiple skills / tasks / code found in the Beginner documents, the categorization may be insufficient / inaccurate. So, higher-level materials will not likely be similarly categorized.\nFair warning, my mind is random and this will likely manifest in the structure / materials found within the repo.\n\nIncluded Materials\nI will attempt to maintain a Table of Contents as a separate document. Consult this for a comprehensive list of included documents in the Journal of Walkthroughs."
+  },
+  {
+    "objectID": "files/00-scripts_to_process/01-Beginner/Non-scripts/Word Style Reference/rmd-docx-template.html",
+    "href": "files/00-scripts_to_process/01-Beginner/Non-scripts/Word Style Reference/rmd-docx-template.html",
+    "title": "Word Style Reference",
+    "section": "",
+    "text": "This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see http://rmarkdown.rstudio.com.\nWhen you click the Knit button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:\n\nsummary(cars)\n\n     speed           dist       \n Min.   : 4.0   Min.   :  2.00  \n 1st Qu.:12.0   1st Qu.: 26.00  \n Median :15.0   Median : 36.00  \n Mean   :15.4   Mean   : 42.98  \n 3rd Qu.:19.0   3rd Qu.: 56.00  \n Max.   :25.0   Max.   :120.00"
+  },
+  {
+    "objectID": "files/00-scripts_to_process/01-Beginner/Non-scripts/Word Style Reference/rmd-docx-template.html#r-markdown",
+    "href": "files/00-scripts_to_process/01-Beginner/Non-scripts/Word Style Reference/rmd-docx-template.html#r-markdown",
+    "title": "Word Style Reference",
+    "section": "",
+    "text": "This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see http://rmarkdown.rstudio.com.\nWhen you click the Knit button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:\n\nsummary(cars)\n\n     speed           dist       \n Min.   : 4.0   Min.   :  2.00  \n 1st Qu.:12.0   1st Qu.: 26.00  \n Median :15.0   Median : 36.00  \n Mean   :15.4   Mean   : 42.98  \n 3rd Qu.:19.0   3rd Qu.: 56.00  \n Max.   :25.0   Max.   :120.00"
+  },
+  {
+    "objectID": "files/00-scripts_to_process/01-Beginner/Non-scripts/Word Style Reference/rmd-docx-template.html#including-plots",
+    "href": "files/00-scripts_to_process/01-Beginner/Non-scripts/Word Style Reference/rmd-docx-template.html#including-plots",
+    "title": "Word Style Reference",
+    "section": "Including Plots",
+    "text": "Including Plots\nYou can also embed plots, for example:\n\n\n\n\n\nNote that the echo = FALSE parameter was added to the code chunk to prevent printing of the R code that generated the plot."
+  },
+  {
+    "objectID": "files/00-scripts_to_process/01-Beginner/Plotting-Workshop/BaseRPlotting.html",
+    "href": "files/00-scripts_to_process/01-Beginner/Plotting-Workshop/BaseRPlotting.html",
+    "title": "R Notebook",
+    "section": "",
+    "text": "This is an R Markdown Notebook. When you execute code within the notebook, the results appear beneath the code.\nTry executing this chunk by clicking the Run button within the chunk or by placing your cursor inside it and pressing Ctrl+Shift+Enter.\n\nplot(cars)\n\n\n\n\nAdd a new chunk by clicking the Insert Chunk button on the toolbar or by pressing Ctrl+Alt+I.\nWhen you save the notebook, an HTML file containing the code and output will be saved alongside it (click the Preview button or press Ctrl+Shift+K to preview the HTML file).\nThe preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike Knit, Preview does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed."
+  },
+  {
+    "objectID": "files/00-scripts_to_process/01-Beginner/RMarkdown/Word Style Reference/rmd-docx-template.html",
+    "href": "files/00-scripts_to_process/01-Beginner/RMarkdown/Word Style Reference/rmd-docx-template.html",
+    "title": "Word Style Reference",
+    "section": "",
+    "text": "This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see http://rmarkdown.rstudio.com.\nWhen you click the Knit button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:\n\nsummary(cars)\n\n     speed           dist       \n Min.   : 4.0   Min.   :  2.00  \n 1st Qu.:12.0   1st Qu.: 26.00  \n Median :15.0   Median : 36.00  \n Mean   :15.4   Mean   : 42.98  \n 3rd Qu.:19.0   3rd Qu.: 56.00  \n Max.   :25.0   Max.   :120.00"
+  },
+  {
+    "objectID": "files/00-scripts_to_process/01-Beginner/RMarkdown/Word Style Reference/rmd-docx-template.html#r-markdown",
+    "href": "files/00-scripts_to_process/01-Beginner/RMarkdown/Word Style Reference/rmd-docx-template.html#r-markdown",
+    "title": "Word Style Reference",
+    "section": "",
+    "text": "This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see http://rmarkdown.rstudio.com.\nWhen you click the Knit button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:\n\nsummary(cars)\n\n     speed           dist       \n Min.   : 4.0   Min.   :  2.00  \n 1st Qu.:12.0   1st Qu.: 26.00  \n Median :15.0   Median : 36.00  \n Mean   :15.4   Mean   : 42.98  \n 3rd Qu.:19.0   3rd Qu.: 56.00  \n Max.   :25.0   Max.   :120.00"
+  },
+  {
+    "objectID": "files/00-scripts_to_process/01-Beginner/RMarkdown/Word Style Reference/rmd-docx-template.html#including-plots",
+    "href": "files/00-scripts_to_process/01-Beginner/RMarkdown/Word Style Reference/rmd-docx-template.html#including-plots",
+    "title": "Word Style Reference",
+    "section": "Including Plots",
+    "text": "Including Plots\nYou can also embed plots, for example:\n\n\n\n\n\nNote that the echo = FALSE parameter was added to the code chunk to prevent printing of the R code that generated the plot."
+  }
+]

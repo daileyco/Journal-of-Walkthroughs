@@ -1,0 +1,42 @@
+project:
+  type: website
+  output-dir: docs
+  render: 
+    - index.qmd
+    - about.qmd
+    - walkthroughs/
+
+website:
+  title: ""
+  site-url: "https://daileyco.github.io/Journal-of-Walkthroughs"
+  repo-url: "https://github.com/daileyco/Journal-of-Walkthroughs"
+  favicon: /files/images/research.png
+  navbar:
+    logo: /files/images/jow_logo_cropped.png
+    background: "#C2C5AA"
+    foreground: "#000000"
+    tools:
+      - icon: github
+        href: https://daileyco.github.io/Journal-of-Walkthroughs
+    left:
+      - href: index.qmd
+        text: Home
+      - href: about.qmd
+        text: About
+      - text: Walkthroughs
+        menu: 
+          - text: Beginner
+          - text: Intermediate
+          - text: Advanced
+  sidebar: 
+    style: "docked"
+    contents: auto
+
+format:
+  html:
+    theme: journal
+    css: styles.css
+    toc: true
+
+editor: visual
+

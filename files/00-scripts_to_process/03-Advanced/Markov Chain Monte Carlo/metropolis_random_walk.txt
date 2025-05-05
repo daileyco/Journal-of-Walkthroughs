@@ -1,0 +1,2440 @@
+---
+title: "Motion Loggers and Bed Net Use"
+author: "Cody Dailey, Philippe Travers, Eve Miguel, Benjamin Roche"
+date: "8/29/2020"
+output: 
+  html_document:
+    code_folding: hide
+editor_options: 
+  chunk_output_type: inline
+---
+
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+library(lubridate)
+library(ggplot2)
+library(cowplot)
+library(knitr)
+library(dplyr)
+```
+
+
+
+
+# Introduction
+
+Mosquito nets, henceforth bed nets, have proven to be one of the most effective antimalarial commodities. However, the effectiveness is predicated on both availability/possession and use behaviors. Furthermore, while possession of a bed net can be assessed in a fairly straightforward manner, characterizing use behaviors can not. Malaria researchers have often relied on self-reported use metrics which are subject to much information bias, including social desirability bias and recall bias. These potential lapses in validity can hinder evaluations of antimalarial interventions, particularly those acting on or through behavioral modifications such as improving adherence to bed net usage recommendations. 
+
+Objective measures of bed net use have been investigated previously with bed net monitoring devices. These measures aim to remove the aforementioned threats of information bias and, in theory, are able to do exactly that. However, the bed net monitoring data are not trivial and consensus has yet to be reached concerning valid protocols for their collection and analysis. 
+
+
+## Objective
+
+This analysis aims to quantify bed net usage from motion data loggers.
+
+
+
+# Methods
+
+This study is part of the Pathogen's Niche (PANIC) Project that aims to characterize the ecology of *Plasmodium falciparum* malaria in Bobo-Dioulasso, Burkina Faso. The PANIC Project collected data in 2016 in four Bobo-Dioulasso neighborhoods: Dogona, Tounouma, Yeguere, and Secteur 25. Local households were invited for participation following their inclusion in the Sante Inegalites Villes (SANTINELLES) Study. The PANIC Project recruited 885 households for a randomized controlled trial to assess a mobile health intervention to improve bed net use and, thus, lower malaria prevalence.
+
+## Data
+
+Three-thousand five-hundred twenty-six insecticide-treated bed nets (ITN) were distributed to the 885 participating households as per World Health Organization recommendations of 1 ITN per 2 persons. Of these, 91 households were randomly selected to have an ITN equipped with a HOBO Pendant Acceleration Data Logger, henceforth motion loggers, from Onset Computer Corporation. The motion loggers recorded acceleration and tilt on three axes every 30 minutes throughout the study duration, June to November 2016. 
+
+Additionally, 5 ITNs with motion loggers were distributed to study team members for one week where precise logs of usage were kept under controlled conditions. The controlled conditions attempted to mimic expected use patterns described as follows. In all four of five control conditions, bed nets were hung by four corners as was instructed to participating households during the study. Two control conditions (Controls A & D) consisted of the folding and unfolding of all four sides of the bed net during no use and use, respectively; that is, bed nets were unfolded while being used, then folded along the top when not in use. A third control condition (Control E) implemented the same folding/unfolding practices, yet the motion logger was installed upside-down in the pocket, as to mimic potential manipulation by owner. A fourth control condition (Control C) left the bed net unfolded at all times, and the fifth control condition (Control B) served as a negative control wherein the bed net was not used at all and sat motionless on the floor for the trial period. 
+
+
+## Analysis
+
+Motion logger data were read through dedicated HOBO software and exported as comma-separated values files. Subsequent data management and analysis were conducted in R (Version 4.0.2, "Taking Off Again) and RStudio (Version 1.3.1073). 
+
+
+### Determining Bed Net Usage
+
+Three methods were compared in the calculation of bed net use statistics from the motion logger data in the control conditions.
+
+#### Method 1
+The first method uses only X-axis acceleration values. If motion logger data for acceleration along the X-axis exceeds 0.75 g or is less than -0.75 g, the bed net is assumed to be used. The data values for the X-axis acceleration are subset to include those recorded between 1A.M. and 3A.M., for a total of 4 separate records per night. A bed net is assumed to have been used during this time period if at least 3 of the recorded values indicate use; otherwise, the bed net is assumed to have not been used. These determined uses were then compared against the ground truth established from the logs of use kept by the researchers; accuracy, sensitivity, and specificity were calculated. 
+
+#### Method 2
+The second method incorporates data values along each axis for both acceleration and tilt. Each time series of values is analyzed separately, i.e., X-axis acceleration is assessed independently of other data values. Using a control chart-like approach, baseline values of the recorded data are established and recorded values are assessed sequentially for being outside a specified range of values (akin to a stable process being assessed within control boundaries). 
+
+The devised algorithm is outlined as follows. Again, values along each axis for acceleration and tilt were individually assessed for a change in value. The algorithm iteratively computed a running mean for each value and compared current values to the previously calculated running mean. A running mean was chosen to stabilize the comparative value and avoid any issues with slight, negligible fluctuations. If the difference between the current value and the running mean was within a certain range (i.e., the absolute value of the difference was less than a cutoff value), then the current value was added to the running mean calculation and there was "no change" recorded for that time point. If the absolute value of the difference exceeded the given threshold/cutoff value, a "change" was recorded for that time point. Additionally, after each recorded "change," the running mean calculations were reset to begin anew with the new value. Kept usage logs were used to establish when a "change" in usage occurred, i.e., from not using to using or from using to not using. This record of "change" was used as the ground truth for usage; accuracy, sensitivity, and specificity were calculated. 
+
+Initially, a cutoff value or threshold for detectable change was set at 0.75 g for acceleration and 135 degrees for tilt. 
+
+##### Options for Exploring Space
+
+Then, a random walk was implemented to explore the accuracy of varying cutoff/threshold values. The random walk was guided to maximize the product of sensitivity and specificity using uniform distributions (x,y,z acceleration cutoffs ~ U(0,1); x,y,z tilt cutoffs ~ U(0,180)) to generate proposal values.
+
+Or, optimization using optim() function which seems to use very similar method (jumping kernel normal densities)
+
+Or, brute force exploration of all potential values (serious computation time)
+
+
+ALL need some sort of cost function to compare accuracy
+- first run used product of sensitivity and specificity (tried to minimize 1-product)
+- optim function could use that, but ran with Distance to Corner Metric ($D2C=\sqrt{(1-sens)^2+(1-spec)^2}$)
+- there are other options for cost function
++ Youden index, PPV, FDR...
+
+
+Finally after calibration of the cutoff values, daily use was determined. The data were partitioned to 24-hour blocks from noon, 12P.M., to noon, 12P.M., the following day. If there were at least 2 "change" events detected (**could be set to different values**) in the noon-to-noon blocks (**could limit time frame of use), then bed nets were assumed to have been used. 
+
+These daily use measurements were then condensed/summarized to a usage percentage, i.e. the percent of days where the bed net was used. 
+
+
+#### Method 3 
+
+There is another method for time series analysis called a change point analysis. From my understanding, the time series as a whole is examined. The analysis determines how many "change points" exist within the data. Essentially, the time series can be split into segments, divided at "change point" times. By fitting an autoregressive function (or another similar function) with a specified distribution (?or just mean?), you can calculate the error from the observations to a prediction. The multiple change point analysis will attempt to find the breaks in the segments where the error is minimized (e.g., segments with different means). 
+
+???
+
+
+
+# Results
+
+## Control Conditons Motion Loggers
+
+```{r testdata, echo = FALSE}
+# normal, expected use pattern
+# logger on side, right side up, folded during day
+test.a <- read.csv("C:/Users/Cody Dailey/Dropbox/BASES PANIC FINALES ET DICTIONNAIRES/5.PUCE MOVT AND TEMP/5.Base_test/LoggerM_tests/Ben/LoggerM Test a.csv")
+test.a$test <- "a"
+
+# unused
+# logger on top, horizontal, folded during day
+test.b <- read.csv("C:/Users/Cody Dailey/Dropbox/BASES PANIC FINALES ET DICTIONNAIRES/5.PUCE MOVT AND TEMP/5.Base_test/LoggerM_tests/Ben/LoggerM Test b.csv")
+test.b$test <- "b"
+
+
+# used without folding during no use
+# logger on side, right side up, not folded during day
+test.c <- read.csv("C:/Users/Cody Dailey/Dropbox/BASES PANIC FINALES ET DICTIONNAIRES/5.PUCE MOVT AND TEMP/5.Base_test/LoggerM_tests/Eve/LoggerM Test c.csv")
+test.c$test <- "c"
+
+
+# normal, expected use pattern
+# logger on side, right side up, folded during day
+test.d <- read.csv("C:/Users/Cody Dailey/Dropbox/BASES PANIC FINALES ET DICTIONNAIRES/5.PUCE MOVT AND TEMP/5.Base_test/LoggerM_tests/Phil/LoggerM Test d.csv")
+test.d$test <- "d"
+
+# normal, expected use patter, inverted logger
+# logger on side, upside down, folded during day
+test.e <- read.csv("C:/Users/Cody Dailey/Dropbox/BASES PANIC FINALES ET DICTIONNAIRES/5.PUCE MOVT AND TEMP/5.Base_test/LoggerM_tests/Phil/LoggerM Test e.csv")
+test.e$test <- "e"
+
+tests <- rbind(test.a, test.b, test.c, test.d, test.e)
+
+# correct inconsistency
+tests$bed_net_usage[81] <- "unused"
+tests[tests$test=="b", "bed_net_usage"] <- "unused"
+
+save(tests, file="motion_loggers.rdata")
+```
+
+The 5 control conditions tested with the motion loggers yielded `r nrow(tests)` observations, `r nrow(test.a)` for control A, `r nrow(test.b)` for control B, `r nrow(test.c)` for control C, `r nrow(test.d)` for control D, and `r nrow(test.a)` for control E (@fig1).
+
+
+### Glimpse at data
+
+```{r}
+tests[1:15,c(3, 7:14)]
+```
+
+```{r}
+x_in = as.POSIXct(c("2017-01-06 21:30:00", "2017-01-08 03:20:00", "2017-01-09 00:30:00",
+                      "2017-01-09 23:30:00", "2017-01-10 22:00:00", "2017-01-11 22:30:00",
+                      "2017-01-12 22:00:00", "2017-01-13 23:00:00", "2017-01-15 03:30:00"), tz = "")
+x_out = as.POSIXct(c("2017-01-07 08:20:00", "2017-01-08 10:20:00", "2017-01-09 07:00:00",
+                     "2017-01-10 06:30:00", "2017-01-11 08:30:00", "2017-01-12 07:30:00",
+                     "2017-01-13 07:00:00", "2017-01-14 08:30:00", "2017-01-15 09:30:00"), tz = "")
+x_usage_a <- data.frame(x_in, x_out, bed_net_usage = "Bed Net Used")
+
+
+test.a$date_fr_full <- as.POSIXct(test.a$date_fr_full)
+
+transform.degrees <- 90
+
+test.a.plot <- ggplot(test.a, aes(x = date_fr_full)) +
+  geom_line(aes(y = accel_x_g, colour = "X-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = accel_y_g, colour = "Y-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = accel_z_g, colour = "Z-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = (tilt_x_d-transform.degrees)/transform.degrees, colour = "X-axis", linetype = "Tilt"))+
+  geom_line(aes(y = (tilt_y_d-transform.degrees)/transform.degrees, colour = "Y-axis", linetype = "Tilt"))+
+  geom_line(aes(y = (tilt_z_d-transform.degrees)/transform.degrees, colour = "Z-axis", linetype = "Tilt"))+
+  scale_x_datetime(name = "Date and time", date_breaks = "1 day", date_labels = "%d/%m/%y")+
+  scale_y_continuous(name = "Acceleration (g)",breaks = round(seq(-1.0, 1.0, by = 0.25), 2),
+                     limits = c(-1.1, 1.1), sec.axis = sec_axis(~.*transform.degrees+transform.degrees, name="Tilt (degrees)", breaks = seq(0, 180, by = 45)))+
+  #ggtitle("Acceleration and Tilt of Motion Loggers, Control A")+
+  scale_colour_manual(name="", values =c ("X-axis" = "brown", "Y-axis" = "forestgreen", "Z-axis" = "blue3"))+
+  scale_fill_manual(name="", values =c("Bed Net Used" = "cyan3"))+
+  scale_linetype_manual(name="", values = c("Acceleration" = "solid", "Tilt" = "twodash"))+
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))+
+  geom_hline(yintercept=0)+
+  geom_rect(data = x_usage_a, aes(xmin = x_out, xmax = x_in, ymin = -Inf, ymax = Inf, fill = bed_net_usage),
+            alpha = 0.3, inherit.aes = FALSE)
+```
+
+
+```{r, eval=F, echo = FALSE}
+
+test.b$date_fr_full <- as.POSIXct(test.b$date_fr_full)
+
+test.b.plot <- ggplot(test.b, aes(x = date_fr_full)) +
+  geom_line(aes(y = accel_x_g, colour = "X-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = accel_y_g, colour = "Y-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = accel_z_g, colour = "Z-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = (tilt_x_d-transform.degrees)/transform.degrees, colour = "X-axis", linetype = "Tilt"))+
+  geom_line(aes(y = (tilt_y_d-transform.degrees)/transform.degrees, colour = "Y-axis", linetype = "Tilt"))+
+  geom_line(aes(y = (tilt_z_d-transform.degrees)/transform.degrees, colour = "Z-axis", linetype = "Tilt"))+
+  scale_x_datetime(name = "Date and time", date_breaks = "1 day", date_labels = "%d/%m/%y")+
+  scale_y_continuous(name = "Acceleration (g)",breaks = round(seq(-1.0, 1.0, by = 0.25), 2),
+                     limits = c(-1.1, 1.1), sec.axis = sec_axis(~.*transform.degrees+transform.degrees, name="Tilt (degrees)", breaks = seq(0, 180, by = 45)))+
+  #ggtitle("Acceleration and Tilt of Motion Loggers, Control B")+
+  scale_colour_manual(name="", values =c ("X-axis" = "brown", "Y-axis" = "forestgreen", "Z-axis" = "blue3"))+
+  scale_fill_manual(name="", values =c("Bed Net Used" = "cyan3"))+
+  scale_linetype_manual(name="", values = c("Acceleration" = "solid", "Tilt" = "twodash"))+
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))+
+  geom_hline(yintercept=0)#+
+  #geom_rect(data = x_usage_a, aes(xmin = x_out, xmax = x_in, ymin = -Inf, ymax = Inf, fill = bed_net_usage), alpha = 0.3, inherit.aes = FALSE)
+
+
+
+
+x_in = as.POSIXct(c("2017-02-25 22:00:00", "2017-02-26 21:00:00", "2017-02-27 21:15:00",
+                      "2017-02-28 21:30:00", "2017-03-01 21:30:00", "2017-03-02 21:30:00"), tz = "")
+x_out = as.POSIXct(c("2017-02-26 10:00:00", "2017-02-27 08:30:00", "2017-02-28 08:30:00",
+                     "2017-03-01 08:30:00", "2017-03-02 08:30:00", "2017-03-03 08:30:00"), tz = "")
+x_usage_c <- data.frame(x_in, x_out, bed_net_usage = "Bed Net Used")
+
+xevent_c <- data.frame(as.POSIXct(c("2017-02-25 22:00:00", "2017-02-26 10:00:00", "2017-02-26 16:00:00", "2017-02-26 21:00:00",
+                                   "2017-02-27 08:30:00", "2017-02-27 21:15:00", "2017-02-28 08:30:00", "2017-02-28 21:30:00",
+                                   "2017-03-01 08:30:00", "2017-03-01 21:30:00", "2017-03-02 08:30:00", "2017-03-02 21:30:00",
+                                   "2017-03-03 08:30:00"), tz = ""))
+
+
+test.c$date_fr_full <- as.POSIXct(test.c$date_fr_full)
+
+
+test.c.plot <- ggplot(test.c, aes(x = date_fr_full)) +
+  geom_line(aes(y = accel_x_g, colour = "X-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = accel_y_g, colour = "Y-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = accel_z_g, colour = "Z-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = (tilt_x_d-transform.degrees)/transform.degrees, colour = "X-axis", linetype = "Tilt"))+
+  geom_line(aes(y = (tilt_y_d-transform.degrees)/transform.degrees, colour = "Y-axis", linetype = "Tilt"))+
+  geom_line(aes(y = (tilt_z_d-transform.degrees)/transform.degrees, colour = "Z-axis", linetype = "Tilt"))+
+  scale_x_datetime(name = "Date and time", date_breaks = "1 day", date_labels = "%d/%m/%y")+
+  scale_y_continuous(name = "Acceleration (g)",breaks = round(seq(-1.0, 1.0, by = 0.25), 2),
+                     limits = c(-1.1, 1.1), sec.axis = sec_axis(~.*transform.degrees+transform.degrees, name="Tilt (degrees)", breaks = seq(0, 180, by = 45)))+
+  #ggtitle("Acceleration and Tilt of Motion Loggers, Control C")+
+  scale_colour_manual(name="", values =c ("X-axis" = "brown", "Y-axis" = "forestgreen", "Z-axis" = "blue3"))+
+  scale_fill_manual(name="", values =c("Bed Net Used" = "cyan3"))+
+  scale_linetype_manual(name="", values = c("Acceleration" = "solid", "Tilt" = "twodash"))+
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))+
+  geom_hline(yintercept=0)+
+  geom_rect(data = x_usage_c, aes(xmin = x_out, xmax = x_in, ymin = -Inf, ymax = Inf, fill = bed_net_usage),
+            alpha = 0.3, inherit.aes = FALSE)
+
+
+
+x_in = as.POSIXct(c("2017-04-01 00:10:00", "2017-04-02 20:45:00", "2017-04-02 22:30:00", "2017-04-03 23:50:00",
+                      "2017-04-04 23:22:00", "2017-04-05 21:14:00", "2017-04-06 23:55:00"), tz = "")
+x_out = as.POSIXct(c("2017-04-01 07:10:00", "2017-04-02 21:45:00", "2017-04-03 07:10:00", "2017-04-04 07:30:00",
+                     "2017-04-05 07:23:00", "2017-04-06 07:12:00", "2017-04-07 07:15:00"), tz = "")
+x_usage_d <- data.frame(x_in, x_out, bed_net_usage = "Bed Net Used")
+
+
+test.d$date_fr_full <- as.POSIXct(test.d$date_fr_full)
+
+
+test.d.plot <- ggplot(test.d, aes(x = date_fr_full)) +
+  geom_line(aes(y = accel_x_g, colour = "X-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = accel_y_g, colour = "Y-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = accel_z_g, colour = "Z-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = (tilt_x_d-transform.degrees)/transform.degrees, colour = "X-axis", linetype = "Tilt"))+
+  geom_line(aes(y = (tilt_y_d-transform.degrees)/transform.degrees, colour = "Y-axis", linetype = "Tilt"))+
+  geom_line(aes(y = (tilt_z_d-transform.degrees)/transform.degrees, colour = "Z-axis", linetype = "Tilt"))+
+  scale_x_datetime(name = "Date and time", date_breaks = "1 day", date_labels = "%d/%m/%y")+
+  scale_y_continuous(name = "Acceleration (g)",breaks = round(seq(-1.0, 1.0, by = 0.25), 2),
+                     limits = c(-1.1, 1.1), sec.axis = sec_axis(~.*transform.degrees+transform.degrees, name="Tilt (degrees)", breaks = seq(0, 180, by = 45)))+
+  #ggtitle("Acceleration and Tilt of Motion Loggers, Control D")+
+  scale_colour_manual(name="", values =c ("X-axis" = "brown", "Y-axis" = "forestgreen", "Z-axis" = "blue3"))+
+  scale_fill_manual(name="", values =c("Bed Net Used" = "cyan3"))+
+  scale_linetype_manual(name="", values = c("Acceleration" = "solid", "Tilt" = "twodash"))+
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))+
+  geom_hline(yintercept=0)+
+  geom_rect(data = x_usage_d, aes(xmin = x_out, xmax = x_in, ymin = -Inf, ymax = Inf, fill = bed_net_usage),
+            alpha = 0.3, inherit.aes = FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
+x_in = as.POSIXct(c("2017-04-01 00:10:00", "2017-04-02 20:45:00", "2017-04-02 22:30:00", "2017-04-03 23:50:00",
+                      "2017-04-04 23:22:00", "2017-04-05 21:14:00", "2017-04-06 23:55:00"), tz = "")
+x_out = as.POSIXct(c("2017-04-01 07:10:00", "2017-04-02 21:45:00", "2017-04-03 07:10:00", "2017-04-04 07:30:00",
+                     "2017-04-05 07:23:00", "2017-04-06 07:12:00", "2017-04-07 07:15:00"), tz = "")
+x_usage_e <- data.frame(x_in, x_out, bed_net_usage = "Bed Net Used")
+
+
+
+
+
+test.e$date_fr_full <- as.POSIXct(test.e$date_fr_full)
+
+
+test.e.plot <- ggplot(test.e, aes(x = date_fr_full)) +
+  geom_line(aes(y = accel_x_g, colour = "X-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = accel_y_g, colour = "Y-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = accel_z_g, colour = "Z-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = (tilt_x_d-transform.degrees)/transform.degrees, colour = "X-axis", linetype = "Tilt"))+
+  geom_line(aes(y = (tilt_y_d-transform.degrees)/transform.degrees, colour = "Y-axis", linetype = "Tilt"))+
+  geom_line(aes(y = (tilt_z_d-transform.degrees)/transform.degrees, colour = "Z-axis", linetype = "Tilt"))+
+  scale_x_datetime(name = "Date and time", date_breaks = "1 day", date_labels = "%d/%m/%y")+
+  scale_y_continuous(name = "Acceleration (g)",breaks = round(seq(-1.0, 1.0, by = 0.25), 2),
+                     limits = c(-1.1, 1.1), sec.axis = sec_axis(~.*transform.degrees+transform.degrees, name="Tilt (degrees)", breaks = seq(0, 180, by = 45)))+
+  #ggtitle("Acceleration and Tilt of Motion Loggers, Control E")+
+  scale_colour_manual(name="", values =c ("X-axis" = "brown", "Y-axis" = "forestgreen", "Z-axis" = "blue3"))+
+  scale_fill_manual(name="", values =c("Bed Net Used" = "cyan3"))+
+  scale_linetype_manual(name="", values = c("Acceleration" = "solid", "Tilt" = "twodash"))+
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))+
+  geom_hline(yintercept=0)+
+  geom_rect(data = x_usage_e, aes(xmin = x_out, xmax = x_in, ymin = -Inf, ymax = Inf, fill = bed_net_usage),
+            alpha = 0.3, inherit.aes = FALSE)
+
+
+plot_grid(plot.new(), test.a.plot,test.b.plot,test.c.plot,test.d.plot,test.e.plot, ncol = 2, labels = c("", "A", "B", "C", "D", "E"))+
+draw_label("Control A - folded/unfolded \nControl B - unused \nControl C - unfolded \nControl D - folded/unfolded \nControl E - folded/unfolded, chip upside-down", x=0.1, y=0.8, hjust=0, vjust=0, size = 14)
+#+
+#draw_label("Acceleration and Tilt of Motion Loggers, Control Conditions", x=0, y=1, hjust=0, vjust=1, size = 16, fontface = "bold")
+```
+
+```{r fig1, out.width="100%", fig.cap="Acceleration and Tilt of Motion Loggers, Control Conditions", echo = FALSE}
+include_graphics("./control_data.png")
+```
+
+
+
+
+### Ground Truth
+
+
+```{r, echo=FALSE}
+tests$day <- 1
+
+# noon-to-noon blocks for days
+## create variables
+for(letter in letters[1:5]){
+  same <- 0
+  for(i in 2:nrow(tests[tests$test==letter,])){
+    if(hour(tests[tests$test==letter,"date_fr_full"][i-1])==12 & same==0){
+      tests[tests$test==letter,"day"][i:nrow(tests[tests$test==letter,])] <- tests[tests$test==letter,"day"][{i}] + 1
+      same <- 1
+    }else{same <- 0}
+  }
+}
+
+tests$change <- NA
+
+for(letter in letters[1:5]){
+  prev <- "unused"
+  for(i in 1:nrow(tests[tests$test==letter,])){
+    if(tests[tests$test==letter,"bed_net_usage"][i]==prev){
+      tests[tests$test==letter, "change"][i] <- "no"
+    }else{
+      tests[tests$test==letter, "change"][i] <- "yes"
+      prev <- tests[tests$test==letter,"bed_net_usage"][i]
+    }
+  }
+}
+
+
+```
+
+
+
+
+
+
+### Method 1
+
+```{r}
+m1.tests <- tests
+
+m1.tests$using <- ifelse(abs(m1.tests$accel_x_g)>=0.75, "yes", "no")
+
+
+m1.usage <- m1.tests %>% 
+  group_by(test, day) %>% 
+  summarise(m1.daily.use = sum(using=="yes" & hour(date_fr_full) >= 1 & hour(date_fr_full) <= 2), 
+            m1.daily.use.gt = sum(bed_net_usage=="used" & hour(date_fr_full) >= 1 & hour(date_fr_full) <= 2)) %>%
+  mutate(m1.usage = ifelse(m1.daily.use>=3, 1, 0),
+         m1.usage.gt = ifelse(m1.daily.use.gt>=3, 1, 0)) 
+
+m1.usage.metrics <- m1.usage %>%
+  group_by(test) %>%
+  summarise(m1.usage = sum(m1.usage) / max(day), 
+            m1.usage.gt = sum(m1.usage.gt) / max(day)) %>%
+  rbind(c(test="_all", as.list(colSums(m1.usage[,5:6])/nrow(m1.usage))))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Method 2
+
+
+```{r helperfunctions}
+# Function to implement control chart-like algorithm
+## Takes a vector or numeric data in time series or sequence
+## Compares next values to current values
+### If difference between values is greater than given cutoff values, then change is detected
+### If difference between values is not greater than given cutoff, then no change is detected
+#### Current values are then added to previous value to calculate running mean
+##### This running mean is used in comparisons to next values in next iteration
+##### If a change is detected, the running mean calculation begins anew with the next value (i.e., the one where changes was detected)
+## Outputs a vector of "yes"/"no" which correspond to whether a change in value was detected at that point in the sequence
+
+detect.Change <- function(.var, .cutoff, .name){
+  
+  change.detected <- rep("no", length(.var))
+  
+  start <- 1
+    
+      for(i in 2:length(.var)){
+       
+         cs <- cumsum(.var[start:{i-1}])
+         runmean <- cs[length(cs)] / length(cs)
+         current.value <- .var[i]
+ 
+         if(abs(current.value - runmean)>.cutoff){
+           change.detected[i] <- "yes"
+           start  <- i
+         }
+         
+      }
+  
+  return(change.detected)
+}
+
+
+# Function to calculate the status of use for bed net
+## takes dataframe with motion loggers data, indicator of analysis method, vector of changepoints
+### if .method==1
+#### dataframe only needs to include motion logger data for acceleration on the x-axis
+#### a bed net usage variable is created (bnu.m1)
+##### if the absolute value of the x-axis acceleration is greater than or equal to 0.75 g's; then the bed net is determined to be "used"
+##### else, the bed net is "unused"
+### if .method==2
+#### dataframe should include each variable output of detect.Change()
+#### variables correspond and are named according to format "change." || axis || a|t 
+##### axes are x,y,z; a/t correspond to acceleration or tilt
+#### change indicator variable == any.change == composite indicator of change detected at a single time point for any of the given 6 variables is calculated
+### if .method==3
+#### a vector of changepoints, i.e., row numbers is needed as an argument
+##### .cps == a vector of changepoints as output by ecp::e.divisive()$estimates
+#### .cps is used to create change indicator variable == change.mcpa
+## implements sequential read of change indicator variable to determine bed net use status for methods 2 & 3
+### sequential read begins anew for each day in a 24 hour block starting at noon and ending noon the next day (first and last day observations are likely shorter)
+### ***assumes starting status is unused***
+### each time a change is detected as specified by change indicator variable == "yes", the status flips
+#### if unused, flipped to used, vice versa
+### compiles statuses into vector bed net usage variable (bnu) with suffix according to method used (e.g., bnu.m2 for method 2)
+## outputs given dataframe with additional two variables for methods 2&3, one variable for method 1
+### additional variables of change indicator variable (m2,3) and bed net usage variable (m1,2,3)
+
+determine.Usage <- function(.data, .method=2, .cps=NULL){
+  
+  if(.method==1){
+    .data$bnu.m1 <- ifelse(abs(.data$accel_x_g)>=0.75, "used", "unused")
+  }
+  if(.method%in%c(2,3)){
+  if(.method==2){
+    .data$any.change <- ifelse(.data$change.xa=="yes" | 
+                                 .data$change.xt=="yes" | 
+                                 .data$change.ya=="yes" | 
+                                 .data$change.yt=="yes" | 
+                                 .data$change.za=="yes" | 
+                                 .data$change.zt=="yes", "yes", "no")
+    
+    
+    .data$bnu.m2 <- "unused"
+    vars <- c("any.change", "bnu.m2")
+  }
+  if(.method==3){
+    .data$change.mcpa <- "no"
+    .data$change.mcpa[.cps] <- "yes"
+    
+    .data$bnu.m3 <- "unused"
+    vars <- c("change.mcpa", "bnu.m3")
+  }
+    for(i in 1:max(.data[ ,"day"])){
+    
+      prev <- "unused"
+    
+      for(ii in 1:nrow(.data[.data$day==i,])){
+        
+        if(.data[.data$day==i,vars[1]][ii]=="yes"){
+        
+          .data[.data$day==i, vars[2]][ii] <- c("used", "unused")[which(c("used", "unused")!=prev)]
+      
+          prev <- c("used", "unused")[which(c("used", "unused")!=prev)]
+    
+        }else{
+      
+          .data[.data$day==i, vars[2]][ii] <- prev
+      
+        }
+      }
+    }
+  }
+    
+ return(.data)   
+}
+
+
+# Function to compare bnu classification against ground truth
+## takes vector of ground truth and vector of predictions
+### values of both should be limited to "used" or "unused"
+## returns vector with 1st element sensitivity and 2nd element specificity
+
+get.Accuracy.metrics <- function(.gt, .pred){
+  sens <- sum(.pred[.gt=="used"]=="used") / sum(.gt=="used")
+  spec <- sum(.pred[.gt=="unused"]=="unused") / sum(.gt=="unused")
+  
+  return(c(sens, spec))
+}
+
+
+# Function to combine previous functions in an apply format
+## takes a list of dataframes, a vector of variable names, a vector of cutoff values, and an indicator of what value to return
+### each dataframe corresponds to a single time series containing motion logger data, i.e., single control scenario
+### the vector of variable names is used to split each dataframe into a single vector for each motion logger value
+### the vector of cutoff values is used in detect.Change(); the elements of the cutoff values should correspond to the variable names vector given
+### the indicator of what value to return takes values==c(1,2)
+#### .return==1 returns a 2 element vector as output by get.Accuracy.metrics()
+#### .return==2 returns a dataframe containing all given list elements and an additional 8 variables 
+##### 6 from detect.Change(), 2 from determine.Usage()
+
+wrapper <- function(.list, .var.vector=c("accel_x_g", "accel_y_g", "accel_z_g", "tilt_x_d", "tilt_y_d", "tilt_z_d"), .cutoff.vector, .return=1){
+  .temp <- lapply(.list, 
+                 function(x){
+                    y <- split(t(x[,.var.vector]), .var.vector)
+                    z <- mapply(detect.Change, .var=y, .cutoff=.cutoff.vector)
+                    colnames(z) <- paste0("change.", rep(c("x", "y", "z"), 2), c(rep("a",3), rep("t",3)))
+                    x <- cbind(x, z)
+                    return(x)
+                  })
+  
+  .temp <- lapply(.temp, determine.Usage)
+  
+  .temp <- bind_rows(.temp)
+  
+  .acc <- get.Accuracy.metrics(.temp$bed_net_usage, .temp$bnu.m2)
+  if(.return==1){return(.acc)}
+  if(.return==2){return(.temp)}
+}
+
+
+# Testing function wrapper
+# test.list <- split(tests, tests$test)
+# vars <- c("accel_x_g", "accel_y_g", "accel_z_g", "tilt_x_d", "tilt_y_d", "tilt_z_d")
+# my.cutoffs <- c(0.75, 0.75, 0.75, 135, 135, 135)
+# 
+# wrapper(test.list, .cutoff.vector=my.cutoffs)
+
+```
+
+
+
+
+
+
+
+```{r rwfunctions}
+# Objective function for Metropolis Random Walk
+## takes values of sensitivity and specificity as 2 element vector
+## calculates Distance to Corner
+### corresponds to Receiver Operating Characteristic (ROC) curve
+#### sensitivity=1 and specificity=1 are perfect values
+
+distance.to.corner <- function(metrics){
+  myreturn <- sqrt(((1-metrics[1])^2) + ((1-metrics[2])^2))
+  myreturn
+}
+
+# Posterior function
+## calculates exponential likelihood with pre-specified tau parameter and distance.to.corner() metric
+### tau parameter corresponds to exponential decay rate
+mylikelihoodTimesPrior <- function(metrics){
+  thelikelihood <- exp(-(tau/2)*distance.to.corner(metrics));
+  theprior <- 1;
+  myreturn <- thelikelihood * theprior;
+  myreturn
+}
+
+
+```
+
+
+
+```{r randomwalk, eval=FALSE}
+# Metropolis Random Walk
+## Random seed set for reproducibility
+## tau parameter set so that acceptance rate =~20-30%
+## 10000 Monte Carlo chosen to ensure convergence
+## Initial values for cutoffs used in detect.Change() chosen for congruity with Method 1
+## Proposal distributions for cutoffs are Uniform with min and max parameters corresponding to min / max of possible motion logger values
+### Acceleration cutoffs ~ U(0,1)
+### Tilt cutoffs ~ U(0,180)
+## Results compiled and saved to dataframe
+
+
+test.list <- split(tests, tests$test)
+
+# "2020-08-29 14:48:20 EDT"
+# "2020-09-15 18:58:41 EDT"
+# "2020-09-20 21:12:53 EDT"
+# as.numeric(Sys.time())
+# 1600210707
+set.seed(1600650764)
+tau <- 375
+mcruns <- 10000
+
+cutoff.accel.chain.x <- rep(NA, mcruns)
+cutoff.tilt.chain.x <- rep(NA, mcruns)
+cutoff.accel.chain.y <- rep(NA, mcruns)
+cutoff.tilt.chain.y <- rep(NA, mcruns)
+cutoff.accel.chain.z <- rep(NA, mcruns)
+cutoff.tilt.chain.z <- rep(NA, mcruns)
+
+accept <- rep(NA,mcruns)
+alphachain <- rep(NA, mcruns)
+
+sensitivity <- rep(NA,mcruns)
+specificity <- rep(NA,mcruns)
+
+
+cutoff.accel.chain.x[1] <- 0.75
+cutoff.accel.chain.y[1] <- 0.75
+cutoff.accel.chain.z[1] <- 0.75
+cutoff.tilt.chain.x[1] <- 135
+cutoff.tilt.chain.y[1] <- 135
+cutoff.tilt.chain.z[1] <- 135
+
+
+metrics <- wrapper(test.list, c(cutoff.accel.chain.x[1], cutoff.accel.chain.y[1], cutoff.accel.chain.z[1], 
+                                cutoff.tilt.chain.x[1],  cutoff.tilt.chain.y[1],  cutoff.tilt.chain.z[1]))
+
+sensitivity[1] <- metrics[1]
+specificity[1] <- metrics[2]
+
+st <- Sys.time()
+for(mc in 2:mcruns){
+current.cutoffs = c(cutoff.accel.chain.x[mc-1], cutoff.accel.chain.y[mc-1], cutoff.accel.chain.z[mc-1],
+                    cutoff.tilt.chain.x[mc-1],  cutoff.tilt.chain.y[mc-1],  cutoff.tilt.chain.z[mc-1])
+
+prop.cutoffs = c(runif(1, 0, 1),  
+                 runif(1, 0, 1),
+                 runif(1, 0, 1),
+                 runif(1, 0, 180),
+                 runif(1, 0, 180),
+                 runif(1, 0, 180))
+
+current.metrics <- wrapper(test.list, current.cutoffs)
+prop.metrics <- wrapper(test.list, prop.cutoffs)
+
+alphanum = mylikelihoodTimesPrior(prop.metrics)
+alphaden = mylikelihoodTimesPrior(current.metrics)
+
+alpha = min(1, alphanum/alphaden)
+alphachain[mc] = alpha
+myunif = runif(1)
+
+if(myunif < alpha){
+  accept[mc] = 1
+  cutoff.accel.chain.x[mc] = prop.cutoffs[1]
+  cutoff.accel.chain.y[mc] = prop.cutoffs[2]
+  cutoff.accel.chain.z[mc] = prop.cutoffs[3]
+  cutoff.tilt.chain.x[mc] = prop.cutoffs[4]
+  cutoff.tilt.chain.y[mc] = prop.cutoffs[5]
+  cutoff.tilt.chain.z[mc] = prop.cutoffs[6]
+  sensitivity[mc] = prop.metrics[1]
+  specificity[mc] = prop.metrics[2]
+}
+if(myunif > alpha){
+  accept[mc] = 0
+  cutoff.accel.chain.x[mc] = current.cutoffs[1]
+  cutoff.accel.chain.y[mc] = current.cutoffs[2]
+  cutoff.accel.chain.z[mc] = current.cutoffs[3]
+  cutoff.tilt.chain.x[mc] = current.cutoffs[4]
+  cutoff.tilt.chain.y[mc] = current.cutoffs[5]
+  cutoff.tilt.chain.z[mc] = current.cutoffs[6]
+  sensitivity[mc] = current.metrics[1]
+  specificity[mc] = current.metrics[2]
+}
+cat(round(mc/mcruns*100,2), "% \n")
+}
+et <- Sys.time()
+
+# 40.69618 secs for 100 mc
+# 40.39888 s 100 mc
+# 1.105228 h for 10000 mc
+
+mhrw <- data.frame(
+  cutoff.accel.chain.x=cutoff.accel.chain.x, cutoff.accel.chain.y=cutoff.accel.chain.y, cutoff.accel.chain.z=cutoff.accel.chain.z, 
+  cutoff.tilt.chain.x=cutoff.tilt.chain.x,   cutoff.tilt.chain.y=cutoff.tilt.chain.y,   cutoff.tilt.chain.z=cutoff.tilt.chain.z,
+                   
+  alphachain=alphachain, accept=accept, mcruns=mcruns,
+                   
+  sensitivity=sensitivity, specificity=specificity)
+
+# save(mhrw, file="mhrw_v3.rdata")
+```
+
+
+
+
+```{r rwdata, echo=FALSE}
+load("mhrw_v3.rdata")
+mhrw$one.minus.spec <- 1 - mhrw$specificity
+mhrw$sens.spec <- mhrw$sensitivity*mhrw$specificity
+mhrw$d2c <- as.numeric(unlist(distance.to.corner(mhrw[,c("sensitivity","specificity")])))
+```
+
+
+```{r d2c, echo=FALSE}
+plot(mhrw$d2c, ylab="Distance to Corner", main="Values of Objective Function across Random Walk")
+points(mhrw[which(mhrw$d2c==min(mhrw$d2c)),"d2c"], pch = 16, col = "red")
+```
+
+
+
+```{r roc, echo=FALSE, fig.cap="ROC Curve?"}
+{
+  plot(x=mhrw$one.minus.spec, y=mhrw$sensitivity, xlab = "1-Specificity", ylab = "Sensitivity")#, main = "ROC Curve")
+  points(x=mhrw[which(mhrw$d2c==min(mhrw$d2c)),"one.minus.spec"], y=mhrw[which(mhrw$d2c==min(mhrw$d2c)),"sensitivity"], pch = 16, col = "red")
+}
+
+roc <- unique(mhrw[,c("one.minus.spec", "sensitivity")])
+
+roc <- roc[order(roc$one.minus.spec, roc$sensitivity, decreasing = TRUE),]
+roc <- roc[!duplicated(roc$one.minus.spec),]
+
+roc <- rbind(roc, data.frame(one.minus.spec = c(0,1), sensitivity = c(0,1)))
+roc <- roc[order(roc$one.minus.spec),]
+
+{
+  plot(x=roc$one.minus.spec, y=roc$sensitivity, type = "o")
+  abline(a=c(0,0), b=c(1,1), lty=3)
+}
+library(pracma)
+trapz(roc$one.minus.spec, roc$sensitivity)
+
+library(zoo)
+sum(diff(roc$one.minus.spec)*rollmean(roc$sensitivity,2))
+
+```
+
+
+
+
+
+```{r traces, fig.cap="Random Walk Trace Plots", echo = FALSE}
+{
+par(mfrow=c(3,2), mar=c(2.1,2.1,2.1,0))
+plot(mhrw$cutoff.accel.chain.x, type="l", main = "X-axis Acceleration")
+plot(mhrw$cutoff.tilt.chain.x, type="l", main = "X-axis Tilt")
+plot(mhrw$cutoff.accel.chain.y, type="l", main = "Y-axis Acceleration")
+plot(mhrw$cutoff.tilt.chain.y, type="l", main = "Y-axis Tilt")
+plot(mhrw$cutoff.accel.chain.z, type="l", main = "Z-axis Acceleration")
+plot(mhrw$cutoff.tilt.chain.z, type="l", main = "Z-axis Tilt")
+}
+```
+
+
+```{r, echo = FALSE, eval = FALSE}
+par(mar=c(5.1,4.1,4.1,2.1))
+{
+  par(mfrow=c(2,1))
+plot(mhrw$alphachain, type="l")
+plot.new()
+text(0.5, 0.5, paste("Acceptance Proportion = ", sum(mhrw$accept[2:length(mhrw$accept)])/mhrw$mcruns[1]))
+}#~20-30%
+
+{
+par(mfrow=c(3,2), mar=c(2.1,2.1,2.1,0))
+hist(mhrw$cutoff.accel.chain.x)
+hist(mhrw$cutoff.tilt.chain.x)
+hist(mhrw$cutoff.accel.chain.y)
+hist(mhrw$cutoff.tilt.chain.y)
+hist(mhrw$cutoff.accel.chain.z)
+hist(mhrw$cutoff.tilt.chain.z)
+}
+```
+
+
+```{r runmeans, echo = FALSE, fig.cap="Running Mean Plots"}
+{
+accel.run.mean.x <- cumsum(mhrw$cutoff.accel.chain.x)/1:mhrw$mcruns[1]
+tilt.run.mean.x <- cumsum(mhrw$cutoff.tilt.chain.x)/1:mhrw$mcruns[1]
+accel.run.mean.y <- cumsum(mhrw$cutoff.accel.chain.y)/1:mhrw$mcruns[1]
+tilt.run.mean.y <- cumsum(mhrw$cutoff.tilt.chain.y)/1:mhrw$mcruns[1]
+accel.run.mean.z <- cumsum(mhrw$cutoff.accel.chain.z)/1:mhrw$mcruns[1]
+tilt.run.mean.z <- cumsum(mhrw$cutoff.tilt.chain.z)/1:mhrw$mcruns[1]
+par(mfrow=c(3,2), mar=c(2.1,2.1,2.1,0))
+plot(accel.run.mean.x, type="l", main = "X-axis Acceleration")
+plot(tilt.run.mean.x, type="l", main = "X-axis Tilt")
+plot(accel.run.mean.y, type="l", main = "Y-axis Acceleration")
+plot(tilt.run.mean.y, type="l", main = "Y-axis Tilt")
+plot(accel.run.mean.z, type="l", main = "Z-axis Acceleration")
+plot(tilt.run.mean.z, type="l", main = "Z-axis Tilt")
+}
+```
+
+```{r, echo = FALSE, eval = FALSE}
+{
+acf(accel.run.mean.x) 
+acf(tilt.run.mean.x)
+acf(accel.run.mean.y) 
+acf(tilt.run.mean.y)
+acf(accel.run.mean.z) 
+acf(tilt.run.mean.z)
+}
+par(mfrow=c(1,1),mar=c(5.1,4.1,4.1,2.1))
+
+```
+
+
+```{r}
+
+cutoff.accel.x <- mean(mhrw$cutoff.accel.chain.x)
+cutoff.tilt.x <- mean(mhrw$cutoff.tilt.chain.x)
+cutoff.accel.y <- mean(mhrw$cutoff.accel.chain.y)
+cutoff.tilt.y <- mean(mhrw$cutoff.tilt.chain.y)
+cutoff.accel.z <- mean(mhrw$cutoff.accel.chain.z)
+cutoff.tilt.z <- mean(mhrw$cutoff.tilt.chain.z)
+
+rw.cutoffs <- c(cutoff.accel.x, cutoff.accel.y, cutoff.accel.z, 
+                cutoff.tilt.x, cutoff.tilt.y, cutoff.tilt.z)
+
+rw.cutoffs <- c(0.75, 0.75, 0.75, 135, 135, 135)
+
+nt <- wrapper(test.list, .cutoff.vector=rw.cutoffs, .return = 2)
+nt <- determine.Usage(.data=nt, .method = 1)
+
+addmargins(table(nt$bed_net_usage, nt$bnu.m1))
+addmargins(table(nt$bed_net_usage, nt$bnu.m2))
+
+
+for(i in 1:5){
+    # print(get.Accuracy.metrics(nt$bed_net_usage[nt$test==letters[i]], nt$bnu.m1[nt$test==letters[i]]))
+    # print(distance.to.corner(get.Accuracy.metrics(nt$bed_net_usage[nt$test==letters[i]], nt$bnu.m1[nt$test==letters[i]])))
+    # print(sum(nt$bed_net_usage[nt$test==letters[i]]==nt$bnu.m1[nt$test==letters[i]]) / nrow(nt[nt$test==letters[i],]))
+    
+    print(get.Accuracy.metrics(nt$bed_net_usage[nt$test==letters[i]], nt$bnu.m2[nt$test==letters[i]]))
+    print(distance.to.corner(get.Accuracy.metrics(nt$bed_net_usage[nt$test==letters[i]], nt$bnu.m2[nt$test==letters[i]])))
+    print(sum(nt$bed_net_usage[nt$test==letters[i]]==nt$bnu.m2[nt$test==letters[i]]) / nrow(nt[nt$test==letters[i],]))
+}
+
+
+get.Accuracy.metrics(nt$bed_net_usage, nt$bnu.m1)
+distance.to.corner(get.Accuracy.metrics(nt$bed_net_usage, nt$bnu.m1))
+sum(nt$bed_net_usage==nt$bnu.m1) / nrow(nt)
+
+get.Accuracy.metrics(nt$bed_net_usage, nt$bnu.m2)
+distance.to.corner(get.Accuracy.metrics(nt$bed_net_usage, nt$bnu.m2))
+sum(nt$bed_net_usage==nt$bnu.m2) / nrow(nt)
+
+
+
+
+
+addmargins(table(nt$bed_net_usage, nt$bnu.m1, nt$test))
+addmargins(table(nt$bed_net_usage, nt$bnu.m2, nt$test))
+```
+
+
+```{r}
+
+optim.function <- function(optim.cutoffs){
+  metrics <- wrapper(.list=test.list, .cutoff.vector = optim.cutoffs)
+  d2c <- distance.to.corner(metrics)
+  return(d2c)
+}
+
+optimization <- optim(c(0.75,0.75,0.75, 135, 135, 135), optim.function)
+
+optimization
+
+
+
+
+nt <- wrapper(test.list, .cutoff.vector=optimization$par, .return = 2)
+
+
+
+for(i in 1:5){
+    print(get.Accuracy.metrics(nt$bed_net_usage[nt$test==letters[i]], nt$bnu.m2[nt$test==letters[i]]))
+    print(distance.to.corner(get.Accuracy.metrics(nt$bed_net_usage[nt$test==letters[i]], nt$bnu.m2[nt$test==letters[i]])))
+    print(sum(nt$bed_net_usage[nt$test==letters[i]]==nt$bnu.m2[nt$test==letters[i]]) / nrow(nt[nt$test==letters[i],]))
+}
+
+get.Accuracy.metrics(nt$bed_net_usage, nt$bnu.m2)
+distance.to.corner(get.Accuracy.metrics(nt$bed_net_usage, nt$bnu.m2))
+sum(nt$bed_net_usage==nt$bnu.m2) / nrow(nt)
+
+
+
+
+```
+
+
+
+
+
+```{r table1, echo=FALSE}
+kable(cbind(
+  c("X-axis Acceleration", "X-axis Tilt", "Y-axis Acceleration", "Y-axis Tilt", "Z-axis Acceleration", "Z-axis Tilt"),
+  c(0.75,135,0.75,135,0.75,135),
+  c(round(get.Accuracy.metrics(c(0.75,135,0.75,135,0.75,135)),3),"","","",""),
+  
+  Mean = round(unlist(lapply(mhrw[,1:6], mean)),3), 
+  round(matrix(unlist(lapply(mhrw[,1:6], quantile, prob = c(0, 1))),nrow = 6, byrow = T),3),
+  c(round(get.Accuracy.metrics(unlist(lapply(mhrw[,1:6], mean))),3),"","","",""), 
+  
+  c(round(mhrw[which.min(mhrw$d2c),1:6],3)), 
+  c(round(get.Accuracy.metrics(mhrw[which.min(mhrw$d2c),1:6]),3),"","","","")), 
+  
+  col.names = c("Variable", "Baseline", "Baseline - Sens/Spec", "RW Mean", "RW Minimum", "RW Maximum", "RW Mean - Sens/Spec", "Min D2C", "Min D2C - Sens/Spec"), 
+  row.names = FALSE, 
+  caption = "Cutoff Values and Respective Sensitivities and Specificities")
+
+
+
+# kable(cbind(
+#   c("X-axis Acceleration", "X-axis Tilt", "Y-axis Acceleration", "Y-axis Tilt", "Z-axis Acceleration", "Z-axis Tilt"),
+#   c(0.75,135,0.75,135,0.75,135),
+#   c(round(get.Accuracy.metrics(c(0.75,135,0.75,135,0.75,135)),3),"","","",""),
+#   
+#   Mean = round(unlist(lapply(mhrw[,1:6], mean)),3), 
+#   round(matrix(unlist(lapply(mhrw[,1:6], quantile, prob = c(0, 1))),nrow = 6, byrow = T),3),
+#   c(round(get.Accuracy.metrics(unlist(lapply(mhrw[,1:6], mean))),3),"","","",""), 
+#   
+#   c(round(mhrw[which.max(mhrw$sens.spec),1:6],3)), 
+#   c(round(get.Accuracy.metrics(mhrw[which.max(mhrw$sens.spec),1:6]),3),"","","","")), 
+#   
+#   col.names = c("Variable", "Baseline", "Baseline - Sens/Spec", "RW Mean", "RW Minimum", "RW Maximum", "RW Mean - Sens/Spec", "Max Sens*Spec", "Max Sens*Spec - Sens/Spec"), 
+#   row.names = FALSE, 
+#   caption = "Cutoff Values and Respective Sensitivities and Specificities")
+```
+
+
+
+
+### Evaluate Calibrated Cutoff Values
+
+```{r accmetrics, echo=FALSE, message=FALSE}
+cutoff.accel.x <- mean(mhrw$cutoff.accel.chain.x)
+cutoff.tilt.x <- mean(mhrw$cutoff.tilt.chain.x)
+cutoff.accel.y <- mean(mhrw$cutoff.accel.chain.y)
+cutoff.tilt.y <- mean(mhrw$cutoff.tilt.chain.y)
+cutoff.accel.z <- mean(mhrw$cutoff.accel.chain.z)
+cutoff.tilt.z <- mean(mhrw$cutoff.tilt.chain.z)
+
+rw.cutoffs <- c(cutoff.accel.x, cutoff.accel.y, cutoff.accel.z, 
+                cutoff.tilt.x, cutoff.tilt.y, cutoff.tilt.z)
+
+
+
+# cutoff.accel.x <- mhrw[which.max(mhrw$sens.spec),1]
+# cutoff.tilt.x <- mhrw[which.max(mhrw$sens.spec),2]
+# cutoff.accel.y <- mhrw[which.max(mhrw$sens.spec),3]
+# cutoff.tilt.y <- mhrw[which.max(mhrw$sens.spec),4]
+# cutoff.accel.z <- mhrw[which.max(mhrw$sens.spec),5]
+# cutoff.tilt.z <- mhrw[which.max(mhrw$sens.spec),6]
+
+
+# cutoff.accel.x <- mhrw[which.min(mhrw$d2c),1]
+# cutoff.tilt.x <- mhrw[which.min(mhrw$d2c),2]
+# cutoff.accel.y <- mhrw[which.min(mhrw$d2c),3]
+# cutoff.tilt.y <- mhrw[which.min(mhrw$d2c),4]
+# cutoff.accel.z <- mhrw[which.min(mhrw$d2c),5]
+# cutoff.tilt.z <- mhrw[which.min(mhrw$d2c),6]
+
+
+# cutoff.accel.x <- 0.5
+# cutoff.tilt.x <- 90
+# cutoff.accel.y <- 0.5
+# cutoff.tilt.y <- 90
+# cutoff.accel.z <- 0.5
+# cutoff.tilt.z <- 90
+
+
+tests$change.xa <- "no"
+tests$change.ya <- "no"
+tests$change.za <- "no"
+    
+tests$change.xt <- "no"
+tests$change.yt <- "no"
+tests$change.zt <- "no"
+    
+  
+
+for(letter in letters[1:5]){
+  
+  start.xa <- 1
+  start.ya <- 1
+  start.za <- 1
+  
+  start.xt <- 1
+  start.yt <- 1
+  start.zt <- 1
+  
+  for(i in 2:nrow(tests[tests$test==letter,])){
+  
+     cumsum.xa <- cumsum(tests[tests$test==letter,"accel_x_g"][start.xa:{i-1}])
+     runmean.xa <- cumsum.xa[length(cumsum.xa)] / length(cumsum.xa)
+     current.value.xa <- tests[tests$test==letter,"accel_x_g"][i]
+     # (abs(current.value.xa-runmean.xa)>0.25)
+     
+     cumsum.ya <- cumsum(tests[tests$test==letter,"accel_y_g"][start.ya:{i-1}])
+     runmean.ya <- cumsum.ya[length(cumsum.ya)] / length(cumsum.ya)
+     current.value.ya <- tests[tests$test==letter,"accel_y_g"][i]
+     # (abs(current.value.ya-runmean.ya)>0.25)
+     
+     cumsum.za <- cumsum(tests[tests$test==letter,"accel_z_g"][start.za:{i-1}])
+     runmean.za <- cumsum.za[length(cumsum.za)] / length(cumsum.za)
+     current.value.za <- tests[tests$test==letter,"accel_z_g"][i]
+     # (abs(current.value.za-runmean.za)>0.25)
+     
+     # i=i+1
+     
+     if(abs(current.value.xa-runmean.xa)>cutoff.accel.x){
+       tests[tests$test==letter,"change.xa"][i] <- "yes"
+       start.xa <- i
+     }
+     
+     if(abs(current.value.ya-runmean.ya)>cutoff.accel.y){
+       tests[tests$test==letter,"change.ya"][i] <- "yes"
+       start.ya <- i
+     }
+     
+     if(abs(current.value.za-runmean.za)>cutoff.accel.z){
+       tests[tests$test==letter,"change.za"][i] <- "yes"
+       start.za <- i
+     }
+     
+     
+     
+     cumsum.xt <- cumsum(tests[tests$test==letter,"tilt_x_d"][start.xt:{i-1}])
+     runmean.xt <- cumsum.xt[length(cumsum.xt)] / length(cumsum.xt)
+     current.value.xt <- tests[tests$test==letter,"tilt_x_d"][i]
+     
+     cumsum.yt <- cumsum(tests[tests$test==letter,"tilt_y_d"][start.yt:{i-1}])
+     runmean.yt <- cumsum.yt[length(cumsum.yt)] / length(cumsum.yt)
+     current.value.yt <- tests[tests$test==letter,"tilt_y_d"][i]
+     
+     cumsum.zt <- cumsum(tests[tests$test==letter,"tilt_z_d"][start.zt:{i-1}])
+     runmean.zt <- cumsum.zt[length(cumsum.zt)] / length(cumsum.zt)
+     current.value.zt <- tests[tests$test==letter,"tilt_z_d"][i]
+    
+     
+     if(abs(current.value.xt-runmean.xt)>cutoff.tilt.x){
+       tests[tests$test==letter,"change.xt"][i] <- "yes"
+       start.xt <- i
+     }
+     
+     if(abs(current.value.yt-runmean.yt)>cutoff.tilt.y){
+       tests[tests$test==letter,"change.yt"][i] <- "yes"
+       start.yt <- i
+     }
+     
+     if(abs(current.value.zt-runmean.zt)>cutoff.tilt.z){
+       tests[tests$test==letter,"change.zt"][i] <- "yes"
+       start.zt <- i
+   }
+   
+  }
+}
+
+tests$any.change <- ifelse(tests$change.xa=="yes" | tests$change.xt=="yes" | tests$change.ya=="yes" | tests$change.yt=="yes" | tests$change.za=="yes" | tests$change.zt=="yes", "yes", "no")
+
+
+
+
+raw.accuracy <- sum(tests$change==tests$any.change) / nrow(tests)
+raw.sensitivity <- sum(tests$any.change[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity <- sum(tests$any.change[tests$change=="no"]=="no") / sum(tests$change=="no")
+
+raw.accuracy.xa <- sum(tests$change==tests$change.xa) / nrow(tests)
+raw.sensitivity.xa <- sum(tests$change.xa[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity.xa <- sum(tests$change.xa[tests$change=="no"]=="no") / sum(tests$change=="no")
+raw.accuracy.xt <- sum(tests$change==tests$change.xt) / nrow(tests)
+raw.sensitivity.xt <- sum(tests$change.xt[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity.xt <- sum(tests$change.xt[tests$change=="no"]=="no") / sum(tests$change=="no")
+
+raw.accuracy.ya <- sum(tests$change==tests$change.ya) / nrow(tests)
+raw.sensitivity.ya <- sum(tests$change.ya[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity.ya <- sum(tests$change.ya[tests$change=="no"]=="no") / sum(tests$change=="no")
+raw.accuracy.yt <- sum(tests$change==tests$change.yt) / nrow(tests)
+raw.sensitivity.yt <- sum(tests$change.yt[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity.yt <- sum(tests$change.yt[tests$change=="no"]=="no") / sum(tests$change=="no")
+
+raw.accuracy.za <- sum(tests$change==tests$change.za) / nrow(tests)
+raw.sensitivity.za <- sum(tests$change.za[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity.za <- sum(tests$change.za[tests$change=="no"]=="no") / sum(tests$change=="no")
+raw.accuracy.zt <- sum(tests$change==tests$change.zt) / nrow(tests)
+raw.sensitivity.zt <- sum(tests$change.zt[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity.zt <- sum(tests$change.zt[tests$change=="no"]=="no") / sum(tests$change=="no")
+
+
+
+acc.metrics <- tests %>% group_by(test) %>% summarise(acc = sum(change==any.change) / n(),
+                                                      sens = sum(any.change[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec = sum(any.change[change=="no"]=="no") / sum(change=="no"),
+
+                                                      acc.xa = sum(change==change.xa) / n(),
+                                                      sens.xa = sum(change.xa[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec.xa = sum(change.xa[change=="no"]=="no") / sum(change=="no"),
+                                                      acc.xt = sum(change==change.xt) / n(),
+                                                      sens.xt = sum(change.xt[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec.xt = sum(change.xt[change=="no"]=="no") / sum(change=="no"),
+
+                                                      acc.ya = sum(change==change.xa) / n(),
+                                                      sens.ya = sum(change.ya[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec.ya = sum(change.ya[change=="no"]=="no") / sum(change=="no"),
+                                                      acc.yt = sum(change==change.yt) / n(),
+                                                      sens.yt = sum(change.yt[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec.yt = sum(change.yt[change=="no"]=="no") / sum(change=="no"),
+
+                                                      acc.za = sum(change==change.za) / n(),
+                                                      sens.za = sum(change.za[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec.za = sum(change.za[change=="no"]=="no") / sum(change=="no"),
+                                                      acc.zt = sum(change==change.zt) / n(),
+                                                      sens.zt = sum(change.zt[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec.zt = sum(change.zt[change=="no"]=="no") / sum(change=="no"))
+
+acc.metrics[nrow(acc.metrics)+1,] <- list("_all",
+                                          raw.accuracy, raw.sensitivity, raw.specificity,
+                                          raw.accuracy.xa, raw.sensitivity.xa, raw.specificity.xa,
+                                          raw.accuracy.xt, raw.sensitivity.xt, raw.specificity.xt,
+                                          raw.accuracy.ya, raw.sensitivity.ya, raw.specificity.ya,
+                                          raw.accuracy.yt, raw.sensitivity.yt, raw.specificity.yt,
+                                          raw.accuracy.za, raw.sensitivity.za, raw.specificity.za,
+                                          raw.accuracy.zt, raw.sensitivity.zt, raw.specificity.zt)
+
+
+usage <- tests %>% 
+  group_by(test, day) %>% 
+  summarise(gt.uses = sum(change=="yes"), uses.any = sum(any.change=="yes"), 
+            uses.xa = sum(change.xa=="yes"), uses.xt = sum(change.xt=="yes"),
+            uses.ya = sum(change.ya=="yes"), uses.yt = sum(change.yt=="yes"),
+            uses.za = sum(change.za=="yes"), uses.zt = sum(change.zt=="yes")) %>%
+  mutate(usage.gt = ifelse(gt.uses>=2, 1, 0),
+         usage.any = ifelse(uses.any >= 2, 1, 0),
+         usage.xa = ifelse(uses.xa >= 2, 1, 0), usage.xt = ifelse(uses.xt >= 2, 1, 0),
+         usage.ya = ifelse(uses.ya >= 2, 1, 0), usage.yt = ifelse(uses.yt >= 2, 1, 0),
+         usage.za = ifelse(uses.za >= 2, 1, 0), usage.zt = ifelse(uses.zt >= 2, 1, 0)) 
+
+
+
+# usage <- tests %>% 
+#   group_by(test, day) %>% 
+#   summarise(gt.uses = sum(change=="yes"), uses.any = sum(any.change=="yes"), 
+#             uses.xa = sum(change.xa=="yes"), uses.xt = sum(change.xt=="yes"),
+#             uses.ya = sum(change.ya=="yes"), uses.yt = sum(change.yt=="yes"),
+#             uses.za = sum(change.za=="yes"), uses.zt = sum(change.zt=="yes")) %>%
+#   mutate(usage.gt = ifelse(gt.uses>=1, 1, 0),
+#          usage.any = ifelse(uses.any >= 1, 1, 0),
+#          usage.xa = ifelse(uses.xa >= 1, 1, 0), usage.xt = ifelse(uses.xt >= 1, 1, 0),
+#          usage.ya = ifelse(uses.ya >= 1, 1, 0), usage.yt = ifelse(uses.yt >= 1, 1, 0),
+#          usage.za = ifelse(uses.za >= 1, 1, 0), usage.zt = ifelse(uses.zt >= 1, 1, 0)) 
+# 
+
+
+
+usage.metrics <- usage %>%
+  group_by(test) %>%
+  summarise(usage.gt = sum(usage.gt) / max(day), 
+            usage.any = sum(usage.any) / max(day),
+            usage.xa = sum(usage.xa) / max(day), usage.xt = sum(usage.xt) / max(day),
+            usage.ya = sum(usage.ya) / max(day), usage.yt = sum(usage.yt) / max(day),
+            usage.za = sum(usage.za) / max(day), usage.zt = sum(usage.zt) / max(day)) %>%
+  rbind(c(test="_all", as.list(colSums(usage[,11:18])/nrow(usage))))
+
+```
+
+```{r tables23, echo=FALSE}
+kable(acc.metrics,digits=3, col.names = c("Control", "Overall Accuracy", "Overall Sensitivity", "Overall Specificity", 
+                                          "Accuracy X-axis Acceleration", "Sensitivity X-axis Acceleration", "Specificity X-axis Acceleration", 
+                                          "Accuracy X-axis Tilt", "Sensitivity X-axis Tilt", "Specificity X-axis Tilt", 
+                                          "Accuracy Y-axis Acceleration", "Sensitivity Y-axis Acceleration", "Specificity Y-axis Acceleration", 
+                                          "Accuracy Y-axis Tilt", "Sensitivity Y-axis Tilt", "Specificity Y-axis Tilt", 
+                                          "Accuracy Z-axis Acceleration", "Sensitivity Z-axis Acceleration", "Specificity Z-axis Acceleration", 
+                                          "Accuracy Z-axis Tilt", "Sensitivity Z-axis Tilt", "Specificity Z-axis Tilt"), caption = "Accuracy Metrics for Detection along Axes and Acceleration or Tilt")
+
+kable(usage.metrics,digits=3, col.names = c("Control", "Ground Truth Usage", "Detected Any", 
+                                            "Detected X-axis Acceleration", "Usage - X-axis Tilt", 
+                                            "Detected Y-axis Acceleration", "Usage - Y-axis Tilt", 
+                                            "Detected Z-axis Acceleration", "Usage - Z-axis Tilt"), caption = "Bed Net Usage Frequencies Detected along Axes and Acceleration or Tilt")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+tests$bnu.m2 <- "unused"
+
+
+for(letter in letters[1:5]){
+  prev <- "unused"
+  
+  for(i in 1:max(tests[tests$test==letter,"day"])){
+    
+    prev <- "unused"
+    
+    for(ii in 1:nrow(tests[tests$test==letter & tests$day==i,])){
+      
+      if(tests[tests$test==letter & tests$day==i,"any.change"][ii]=="yes"){
+        
+        tests[tests$test==letter & tests$day==i, "bnu.m2"][ii] <- c("used", "unused")[which(c("used", "unused")!=prev)]
+      
+        prev <- c("used", "unused")[which(c("used", "unused")!=prev)]
+    
+      }else{
+      
+        tests[tests$test==letter &tests$day==i, "bnu.m2"][ii] <- prev
+      
+      }
+      }
+  }
+}
+
+
+
+
+tests$bnu.m1 <- ifelse(abs(tests$accel_x_g)>=0.75, "used", "unused")
+
+addmargins(table(tests$bed_net_usage,tests$bnu.m1))
+addmargins(table(tests$bed_net_usage,tests$bnu.m2))
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Method 3
+
+
+```{r}
+mcpa.tests <- tests
+
+
+library(ecp)
+
+
+# umcpa.xa <- e.divisive(matrix(c(test.a[,7]), ncol = 1), R = 499, alpha = 1)
+# umcpa.xt <- e.divisive(matrix(c(test.a[,10]), ncol = 1), R = 499, alpha = 1)
+# umcpa.ya <- e.divisive(matrix(c(test.a[,8]), ncol = 1), R = 499, alpha = 1)
+# umcpa.yt <- e.divisive(matrix(c(test.a[,11]), ncol = 1), R = 499, alpha = 1)
+# umcpa.za <- e.divisive(matrix(c(test.a[,9]), ncol = 1), R = 499, alpha = 1)
+# umcpa.zt <- e.divisive(matrix(c(test.a[,12]), ncol = 1), R = 499, alpha = 1)
+# 
+# 
+# mmcpa <- e.divisive(test.a[,7:12], R = 99, alpha = 1)
+
+
+compare.Broken.data <- function(temp, .permutations=99, .alpha=1){
+
+temp1 <- split(temp, temp$day)
+
+# st <- Sys.time()
+mmcpa <- e.divisive(temp[,7:12], R = .permutations, alpha = .alpha, min.size = 2)
+mmcpa.est <- mmcpa$estimates
+mmcpa.est <- mmcpa.est[c(-1, -length(mmcpa.est))]
+
+temp <- determine.Usage(temp, .method=3, .cps=mmcpa.est)
+# mmcpa.ss <- get.Accuracy.metrics(temp$bed_net_usage, temp$bnu.m3)
+# mmcpa.acc <- sum(temp$bed_net_usage==temp$bnu.m3) / nrow(temp)
+# et <- Sys.time()
+# 
+# 
+# st1 <- Sys.time()
+mmcpa1 <- lapply(temp1, function(x){e.divisive(x[,7:12], R = .permutations, alpha = .alpha, min.size = 2)})
+est <- lapply(mmcpa1, function(x){purrr::pluck(x, "estimates")})
+row.corrections <- cumsum(mapply(function(.d){nrow(temp[temp$day==.d,])}, .d=1:max(temp$day)))
+row.corrections <- c(0, row.corrections[-length(row.corrections)])
+cc.est <- unlist(mapply(function(x,y){x <- x[c(-1, -length(x))]; x+y}, x=est, y=row.corrections))
+cc.est <- unique(cc.est)
+
+temp1 <- determine.Usage(temp, .method=3, .cps=cc.est)
+# cc.ss <- get.Accuracy.metrics(temp1$bed_net_usage, temp1$bnu.m3)
+# cc.acc <- sum(temp1$bed_net_usage==temp1$bnu.m3) / nrow(temp1)
+# et1 <- Sys.time()
+
+
+# gt <- which(temp$change=="yes")
+# cat("\n \n \n \n ground truth change points \n")
+# print(gt)
+# print(length(gt))
+# cat("\n \n mmcpa.est \n")
+# cat("\n Run time:", et-st, "\n")
+# print(mmcpa.est)
+# cat("\n # of mmcpa.est in gt=", sum(mmcpa.est%in%gt))
+# cat("\n # of mmcpa.est not in gt=",sum(!mmcpa.est%in%gt))
+# cat("\n # of gt in mmcpa.est=", sum(gt%in%mmcpa.est))
+# cat("\n # of gt not in mmcpa.est=",sum(!gt%in%mmcpa.est))
+# cat("\n Sensitivity & Specificity=", mmcpa.ss)
+# cat("\n Distance to corner=", distance.to.corner(mmcpa.ss))
+# cat("\n Accuracy=", mmcpa.acc)
+# cat("\n \n \n cc.est")
+# cat("\n Run time:", et1-st1, "\n")
+# print(cc.est)
+# cat("\n # of cc.est in gt=",sum(cc.est%in%gt))
+# cat("\n # of cc.est not in gt=", sum(!cc.est%in%gt))
+# cat("\n # of gt in cc.est=", sum(gt%in%cc.est))
+# cat("\n # of gt not in cc.est=", sum(!gt%in%cc.est))
+# cat("\n Sensitivity & Specificity=", cc.ss)
+# cat("\n Distance to corner=", distance.to.corner(cc.ss))
+# cat("\n Accuracy=", cc.acc)
+
+
+
+
+return(list(mmcpa=temp, ccmmcpa=temp1))
+}
+
+
+
+cpa <- mapply(function(.permutations.vector, .alpha.vector){
+  lapply(test.list, compare.Broken.data, .permutations=.permutations.vector, .alpha=.alpha.vector)
+}, .permutations.vector=rep(c(99,499,999),2), .alpha.vector=c(rep(1,3), rep(2,3)))
+
+
+# save(cpa, file="cpa.rdata")
+
+
+for(i in 1:6){
+    cat("\n \n \n \n")
+    cat("\n N permutations = ", permutations.vector[i])
+    cat("\n alpha = ", alpha.vector[i])
+    cat("\n \n")
+    
+    cpa1 <- cpa[,i]
+    cpa1.mmcpa <- lapply(cpa1, function(x){purrr::pluck(x, "mmcpa")})
+    cpa1.ccmmcpa <- lapply(cpa1, function(x){purrr::pluck(x, "ccmmcpa")})
+    
+    
+    cat("\n \n \n MMCPA")
+        lapply(cpa1.mmcpa, function(x){
+          acc <- get.Accuracy.metrics(x$bed_net_usage, x$bnu.m3)
+          cat("\n \n Sensitivity & Specificity=", acc)
+          cat("\n Distance to corner=", distance.to.corner(acc))
+          cat("\n Accuracy=", sum(x$bed_net_usage==x$bnu.m3) / nrow(x))
+          })
+        
+        cat("\n \n Overall")
+        
+        cpa1.mmcpa <- bind_rows(cpa1.mmcpa)
+        
+        acc <- get.Accuracy.metrics(cpa1.mmcpa$bed_net_usage, cpa1.mmcpa$bnu.m3)
+        cat("\n Sensitivity & Specificity=", acc)
+        cat("\n Distance to corner=", distance.to.corner(acc))
+        cat("\n Accuracy=", sum(cpa1.mmcpa$bed_net_usage==cpa1.mmcpa$bnu.m3) / nrow(cpa1.mmcpa))
+    
+    
+    
+    cat("\n \n \n ccmmcpa")
+        lapply(cpa1.ccmmcpa, function(x){
+          acc <- get.Accuracy.metrics(x$bed_net_usage, x$bnu.m3)
+          cat("\n \n Sensitivity & Specificity=", acc)
+          cat("\n Distance to corner=", distance.to.corner(acc))
+          cat("\n Accuracy=", sum(x$bed_net_usage==x$bnu.m3) / nrow(x))
+          })
+        
+        cat("\n \n Overall")
+        
+        cpa1.ccmmcpa <- bind_rows(cpa1.ccmmcpa)
+        
+        acc <- get.Accuracy.metrics(cpa1.ccmmcpa$bed_net_usage, cpa1.ccmmcpa$bnu.m3)
+        cat("\n Sensitivity & Specificity=", acc)
+        cat("\n Distance to corner=", distance.to.corner(acc))
+        cat("\n Accuracy=", sum(cpa1.ccmmcpa$bed_net_usage==cpa1.ccmmcpa$bnu.m3) / nrow(cpa1.ccmmcpa))
+
+}
+
+
+
+
+
+
+
+
+
+length(umcpa.xa$estimates)
+length(umcpa.xt$estimates)
+length(umcpa.ya$estimates)
+length(umcpa.yt$estimates)
+length(umcpa.za$estimates)
+length(umcpa.zt$estimates)
+
+length(mmcpa$estimates)
+
+length(which(mcpa.tests$change[mcpa.tests$test=="a"]=="yes"))
+
+
+
+
+
+umcpa.xa$estimates
+umcpa.xt$estimates
+umcpa.ya$estimates
+umcpa.yt$estimates
+umcpa.za$estimates
+umcpa.zt$estimates
+
+mmcpa$estimates
+
+which(mcpa.tests$change[mcpa.tests$test=="a"]=="yes")
+
+
+
+
+
+
+
+mcpa.tests$umcpa.xa <- NA
+
+mcpa.tests$umcpa.xa[mcpa.tests$test=="a"] <- "no"
+mcpa.tests$umcpa.xa[mcpa.tests$test=="a"][umcpa.xa$estimates] <- "yes"
+
+mcpa.tests$umcpa.xt <- NA
+
+mcpa.tests$umcpa.xt[mcpa.tests$test=="a"] <- "no"
+mcpa.tests$umcpa.xt[mcpa.tests$test=="a"][umcpa.xt$estimates] <- "yes"
+
+mcpa.tests$umcpa.ya <- NA
+
+mcpa.tests$umcpa.ya[mcpa.tests$test=="a"] <- "no"
+mcpa.tests$umcpa.ya[mcpa.tests$test=="a"][umcpa.ya$estimates] <- "yes"
+
+mcpa.tests$umcpa.yt <- NA
+
+mcpa.tests$umcpa.yt[mcpa.tests$test=="a"] <- "no"
+mcpa.tests$umcpa.yt[mcpa.tests$test=="a"][umcpa.yt$estimates] <- "yes"
+
+mcpa.tests$umcpa.za <- NA
+
+mcpa.tests$umcpa.za[mcpa.tests$test=="a"] <- "no"
+mcpa.tests$umcpa.za[mcpa.tests$test=="a"][umcpa.za$estimates] <- "yes"
+
+mcpa.tests$umcpa.zt <- NA
+
+mcpa.tests$umcpa.zt[mcpa.tests$test=="a"] <- "no"
+mcpa.tests$umcpa.zt[mcpa.tests$test=="a"][umcpa.zt$estimates] <- "yes"
+
+
+mcpa.tests$mmcpa <- NA
+
+mcpa.tests$mmcpa[mcpa.tests$test=="a"] <- "no"
+mcpa.tests$mmcpa[mcpa.tests$test=="a"][mmcpa$estimates] <- "yes"
+
+cps.umcpa.xa <- as.POSIXct(mcpa.tests$date_fr_full[mcpa.tests$test=="a"][umcpa.xa$estimates])
+cps.umcpa.xt <- as.POSIXct(mcpa.tests$date_fr_full[mcpa.tests$test=="a"][umcpa.xt$estimates])
+cps.umcpa.ya <- as.POSIXct(mcpa.tests$date_fr_full[mcpa.tests$test=="a"][umcpa.ya$estimates])
+cps.umcpa.yt <- as.POSIXct(mcpa.tests$date_fr_full[mcpa.tests$test=="a"][umcpa.yt$estimates])
+cps.umcpa.za <- as.POSIXct(mcpa.tests$date_fr_full[mcpa.tests$test=="a"][umcpa.za$estimates])
+cps.umcpa.zt <- as.POSIXct(mcpa.tests$date_fr_full[mcpa.tests$test=="a"][umcpa.zt$estimates])
+
+cps.mmcpa <- as.POSIXct(mcpa.tests$date_fr_full[mcpa.tests$test=="a"][mmcpa$estimates])
+cps.gt <- as.POSIXct(mcpa.tests$date_fr_full[which(mcpa.tests$change[mcpa.tests$test=="a"]=="yes")])
+
+test.a.plot + geom_vline(xintercept = cps.gt , size = 2) + geom_vline(xintercept = cps.umcpa.xa, linetype = "dotted", color = "red", size = 1)
+test.a.plot + geom_vline(xintercept = cps.gt , size = 2) + geom_vline(xintercept = cps.umcpa.xt, linetype = "dotted", color = "red", size = 1)
+test.a.plot + geom_vline(xintercept = cps.gt , size = 2) + geom_vline(xintercept = cps.umcpa.ya, linetype = "dotted", color = "red", size = 1)
+test.a.plot + geom_vline(xintercept = cps.gt , size = 2) + geom_vline(xintercept = cps.umcpa.yt, linetype = "dotted", color = "red", size = 1)
+test.a.plot + geom_vline(xintercept = cps.gt , size = 2) + geom_vline(xintercept = cps.umcpa.za, linetype = "dotted", color = "red", size = 1)
+test.a.plot + geom_vline(xintercept = cps.gt , size = 2) + geom_vline(xintercept = cps.umcpa.zt, linetype = "dotted", color = "red", size = 1)
+test.a.plot + geom_vline(xintercept = cps.gt , size = 2) + geom_vline(xintercept = cps.mmcpa, linetype = "dotted", color = "red", size = 1)
+
+  
+ggplot(test.a, aes(x = date_fr_full)) + geom_vline(xintercept = cps.gt , size = 2) + geom_vline(xintercept = cps.mmcpa, linetype = "dotted", color = "red", size = 2) +
+  geom_line(aes(y = accel_x_g, colour = "X-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = accel_y_g, colour = "Y-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = accel_z_g, colour = "Z-axis", linetype = "Acceleration"))+
+  geom_line(aes(y = (tilt_x_d-transform.degrees)/transform.degrees, colour = "X-axis", linetype = "Tilt"))+
+  geom_line(aes(y = (tilt_y_d-transform.degrees)/transform.degrees, colour = "Y-axis", linetype = "Tilt"))+
+  geom_line(aes(y = (tilt_z_d-transform.degrees)/transform.degrees, colour = "Z-axis", linetype = "Tilt"))+
+  scale_x_datetime(name = "Date and time", date_breaks = "1 day", date_labels = "%d/%m/%y")+
+  scale_y_continuous(name = "Acceleration (g)",breaks = round(seq(-1.0, 1.0, by = 0.25), 2),
+                     limits = c(-1.1, 1.1), sec.axis = sec_axis(~.*transform.degrees+transform.degrees, name="Tilt (degrees)", breaks = seq(0, 180, by = 45)))+
+  #ggtitle("Acceleration and Tilt of Motion Loggers, Control A")+
+  scale_colour_manual(name="", values =c ("X-axis" = "brown", "Y-axis" = "forestgreen", "Z-axis" = "blue3"))+
+  scale_fill_manual(name="", values =c("Bed Net Used" = "cyan3"))+
+  scale_linetype_manual(name="", values = c("Acceleration" = "solid", "Tilt" = "twodash"))+
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))+
+  geom_hline(yintercept=0)
+# +
+#   geom_rect(data = x_usage_a, aes(xmin = x_out, xmax = x_in, ymin = -Inf, ymax = Inf, fill = bed_net_usage),
+#             alpha = 0.3, inherit.aes = FALSE)
+#   
+  
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Field Data
+
+```{r, echo=FALSE, eval=FALSE}
+tests <- read.csv("C:/Users/Cody Dailey/Dropbox/BASES PANIC FINALES ET DICTIONNAIRES/5.PUCE MOVT AND TEMP/4.Base_de_données/2.Mouvement/LoggerM_Jun-Nov16.csv")
+```
+
+```{r, echo=FALSE, eval=FALSE}
+library(lubridate)
+
+tests$day <- 1
+
+
+
+
+
+
+# cutoff.accel.x <- mean(mhrw$cutoff.accel.chain.x)
+# cutoff.tilt.x <- mean(mhrw$cutoff.tilt.chain.x)
+# cutoff.accel.y <- mean(mhrw$cutoff.accel.chain.y)
+# cutoff.tilt.y <- mean(mhrw$cutoff.tilt.chain.y)
+# cutoff.accel.z <- mean(mhrw$cutoff.accel.chain.z)
+# cutoff.tilt.z <- mean(mhrw$cutoff.tilt.chain.z)
+
+
+
+cutoff.accel.x <- mhrw[which.max(mhrw$sens.spec),1]
+cutoff.tilt.x <- mhrw[which.max(mhrw$sens.spec),2]
+cutoff.accel.y <- mhrw[which.max(mhrw$sens.spec),3]
+cutoff.tilt.y <- mhrw[which.max(mhrw$sens.spec),4]
+cutoff.accel.z <- mhrw[which.max(mhrw$sens.spec),5]
+cutoff.tilt.z <- mhrw[which.max(mhrw$sens.spec),6]
+
+
+# cutoff.accel.x <- 0.5
+# cutoff.tilt.x <- 90
+# cutoff.accel.y <- 0.5
+# cutoff.tilt.y <- 90
+# cutoff.accel.z <- 0.5
+# cutoff.tilt.z <- 90
+
+
+
+
+
+    
+tests$change.xa <- "no"
+tests$change.ya <- "no"
+tests$change.za <- "no"
+    
+tests$change.xt <- "no"
+tests$change.yt <- "no"
+tests$change.zt <- "no"
+    
+  
+```
+
+
+
+```{r, echo=FALSE, eval=FALSE}
+
+log.list <- list(tests[tests$id_hh==unique(tests$id_hh)[1],])
+
+for(i in 2:length(unique(tests$id_hh))){
+  log.list <- c(log.list, list(tests[tests$id_hh==unique(tests$id_hh)[i],]))
+}
+
+```
+
+
+
+```{r, echo=FALSE}
+
+
+detect.Change <- function(tests){
+  
+  
+  same <- 0
+  
+
+  start.xa <- 1
+  start.ya <- 1
+  start.za <- 1
+  
+  start.xt <- 1
+  start.yt <- 1
+  start.zt <- 1
+  
+  for(i in 2:nrow(tests)){
+  
+     cumsum.xa <- cumsum(tests[,"accel_x_g"][start.xa:{i-1}])
+     runmean.xa <- cumsum.xa[length(cumsum.xa)] / length(cumsum.xa)
+     current.value.xa <- tests[,"accel_x_g"][i]
+     # (abs(current.value.xa-runmean.xa)>0.25)
+     
+     cumsum.ya <- cumsum(tests[,"accel_y_g"][start.ya:{i-1}])
+     runmean.ya <- cumsum.ya[length(cumsum.ya)] / length(cumsum.ya)
+     current.value.ya <- tests[,"accel_y_g"][i]
+     # (abs(current.value.ya-runmean.ya)>0.25)
+     
+     cumsum.za <- cumsum(tests[,"accel_z_g"][start.za:{i-1}])
+     runmean.za <- cumsum.za[length(cumsum.za)] / length(cumsum.za)
+     current.value.za <- tests[,"accel_z_g"][i]
+     # (abs(current.value.za-runmean.za)>0.25)
+     
+     # i=i+1
+     
+     if(abs(current.value.xa-runmean.xa)>cutoff.accel.x){
+       tests[,"change.xa"][i] <- "yes"
+       start.xa <- i
+     }
+     
+     if(abs(current.value.ya-runmean.ya)>cutoff.accel.y){
+       tests[,"change.ya"][i] <- "yes"
+       start.ya <- i
+     }
+     
+     if(abs(current.value.za-runmean.za)>cutoff.accel.z){
+       tests[,"change.za"][i] <- "yes"
+       start.za <- i
+     }
+     
+     
+     
+     cumsum.xt <- cumsum(tests[,"tilt_x_d"][start.xt:{i-1}])
+     runmean.xt <- cumsum.xt[length(cumsum.xt)] / length(cumsum.xt)
+     current.value.xt <- tests[,"tilt_x_d"][i]
+     
+     cumsum.yt <- cumsum(tests[,"tilt_y_d"][start.yt:{i-1}])
+     runmean.yt <- cumsum.yt[length(cumsum.yt)] / length(cumsum.yt)
+     current.value.yt <- tests[,"tilt_y_d"][i]
+     
+     cumsum.zt <- cumsum(tests[,"tilt_z_d"][start.zt:{i-1}])
+     runmean.zt <- cumsum.zt[length(cumsum.zt)] / length(cumsum.zt)
+     current.value.zt <- tests[,"tilt_z_d"][i]
+    
+     
+     if(abs(current.value.xt-runmean.xt)>cutoff.tilt.x){
+       tests[,"change.xt"][i] <- "yes"
+       start.xt <- i
+     }
+     
+     if(abs(current.value.yt-runmean.yt)>cutoff.tilt.y){
+       tests[,"change.yt"][i] <- "yes"
+       start.yt <- i
+     }
+     
+     if(abs(current.value.zt-runmean.zt)>cutoff.tilt.z){
+       tests[,"change.zt"][i] <- "yes"
+       start.zt <- i
+     }
+     
+     
+     
+     if(hour(tests[,"date_bf_full"][i-1])==12 & same==0){
+      tests[,"day"][i:nrow(tests)] <- tests[,"day"][{i}] + 1
+      same <- 1
+    }else{same <- 0}
+
+     # cat(i, " of ", nrow(tests[tests$id_hh==id,]), " (", round(i/nrow(tests[tests$id_hh==id,])*100,2)," %) \n")
+   
+  }
+
+
+tests$any.change <- ifelse(tests$change.xa=="yes" | tests$change.xt=="yes" | tests$change.ya=="yes" | tests$change.yt=="yes" | tests$change.za=="yes" | tests$change.zt=="yes", "yes", "no")
+
+return(tests)
+
+}
+
+
+```
+
+
+
+```{r, eval=FALSE, echo = FALSE}
+loggers <- lapply(log.list, detect.Change)
+
+
+library(dplyr)
+logs <- bind_rows(loggers)
+# save(logs, file="motion_logs.rdata")
+```
+
+```{r}
+load("motion_logs.rdata")
+```
+
+
+```{r, echo = FALSE}
+logs$prev.change <- ifelse(abs(logs$accel_x_g)>=0.75, "yes", "no")
+
+
+usage <- logs %>% 
+  group_by(id_hh, day) %>% 
+  summarise(uses.any = sum(any.change=="yes"), 
+            uses.xa = sum(change.xa=="yes"), uses.xt = sum(change.xt=="yes"),
+            uses.ya = sum(change.ya=="yes"), uses.yt = sum(change.yt=="yes"),
+            uses.za = sum(change.za=="yes"), uses.zt = sum(change.zt=="yes"),
+            prev.uses = sum(prev.change=="yes" & hour(date_bf_full) >= 1 & hour(date_bf_full) <= 2)) %>%
+  mutate(usage.any = ifelse(uses.any >= 2, 1, 0),
+         usage.xa = ifelse(uses.xa >= 2, 1, 0), usage.xt = ifelse(uses.xt >= 2, 1, 0),
+         usage.ya = ifelse(uses.ya >= 2, 1, 0), usage.yt = ifelse(uses.yt >= 2, 1, 0),
+         usage.za = ifelse(uses.za >= 2, 1, 0), usage.zt = ifelse(uses.zt >= 2, 1, 0),
+         prev.usage = ifelse(prev.uses>=3, 1, 0)) 
+
+usage.metrics <- usage %>%
+  group_by(id_hh) %>%
+  summarise(usage.any = sum(usage.any) / max(day),
+            usage.xa = sum(usage.xa) / max(day), usage.xt = sum(usage.xt) / max(day),
+            usage.ya = sum(usage.ya) / max(day), usage.yt = sum(usage.yt) / max(day),
+            usage.za = sum(usage.za) / max(day), usage.zt = sum(usage.zt) / max(day),
+            prev.usage = sum(prev.usage) / max(day)) %>%
+  rbind(c(id_hh="_all", as.list(colSums(usage[,11:18])/nrow(usage))))
+
+
+
+
+logs$month <- ifelse(logs$date_bf_day==1 & hour(logs$date_bf_full)<=12, ifelse(hour(logs$date_bf_full)<12 | {hour(logs$date_bf_full)==12 & minute(logs$date_bf_full)<30}, logs$date_bf_mo-1, logs$date_bf_mo), logs$date_bf_mo)
+
+
+
+usage.by.month <- logs %>% 
+  group_by(id_hh, site, group, month, day) %>% 
+  summarise(uses.any = sum(any.change=="yes"), 
+            uses.xa = sum(change.xa=="yes"), uses.xt = sum(change.xt=="yes"),
+            uses.ya = sum(change.ya=="yes"), uses.yt = sum(change.yt=="yes"),
+            uses.za = sum(change.za=="yes"), uses.zt = sum(change.zt=="yes"),
+            prev.uses = sum(prev.change=="yes" & hour(date_bf_full) >= 1 & hour(date_bf_full) <= 2)) %>%
+  mutate(usage.any = ifelse(uses.any >= 2, 1, 0),
+         usage.xa = ifelse(uses.xa >= 2, 1, 0), usage.xt = ifelse(uses.xt >= 2, 1, 0),
+         usage.ya = ifelse(uses.ya >= 2, 1, 0), usage.yt = ifelse(uses.yt >= 2, 1, 0),
+         usage.za = ifelse(uses.za >= 2, 1, 0), usage.zt = ifelse(uses.zt >= 2, 1, 0),
+         prev.usage = ifelse(prev.uses>=3, 1, 0))
+
+usage.metrics.by.month <- usage.by.month %>%
+  group_by(id_hh, site, group, month) %>%
+  summarise(n.days = n(), n.days.usage.any = sum(usage.any),
+            usage.any = sum(usage.any) / n.days,
+            usage.xa = sum(usage.xa) / n.days, usage.xt = sum(usage.xt) / n.days,
+            usage.ya = sum(usage.ya) / n.days, usage.yt = sum(usage.yt) / n.days,
+            usage.za = sum(usage.za) / n.days, usage.zt = sum(usage.zt) / n.days,
+            prev.usage = sum(prev.usage) / n.days)
+
+
+
+month.summary <- usage.metrics.by.month %>% group_by(month) %>% summarise(n.days.usage = sum(n.days.usage.any), n.days.obs = sum(n.days)) %>% mutate(usage = n.days.usage / n.days.obs)
+
+
+```
+
+
+
+```{r}
+hist(usage.metrics.by.month$usage.any)
+
+boxplot(usage.metrics.by.month$usage.any~usage.metrics.by.month$month)
+boxplot(usage.metrics.by.month$prev.usage~usage.metrics.by.month$month)
+
+boxplot(usage.metrics.by.month$usage.any~usage.metrics.by.month$month+usage.metrics.by.month$site)
+# boxplot(usage.metrics.by.month$usage.any~usage.metrics.by.month$month+usage.metrics.by.month$group)
+```
+
+
+```{r, echo=FALSE}
+hist(usage.metrics$prev.usage-usage.metrics$usage.any, main = "Comparison of Previous Cutoff \n to Calibrated on Usage Statistics", xlab = "Previous Measure - New Measure")
+```
+
+
+
+
+```{r table4, echo=FALSE}
+kable(usage.metrics,digits=3, col.names = c("Control", "Detected Any", 
+                                            "Detected X-axis Acceleration", "Usage - X-axis Tilt", 
+                                            "Detected Y-axis Acceleration", "Usage - Y-axis Tilt", 
+                                            "Detected Z-axis Acceleration", "Usage - Z-axis Tilt", 
+                                            "Usage - Previous Algorithm"), caption = "Bed Net Usage Frequencies Detected along Axes and Acceleration or Tilt")
+```
+
+
+
+```{r}
+kable(month.summary, digits=4, col.names = c("Month", "Days Used", "Days Observed", "Usage Proportion"))
+
+
+
+```
+
+
+
+
+
+```{r, echo=FALSE, eval=FALSE}
+logs[match("DOG064301", logs$id_hh),"id_log"]
+
+usage.metrics[usage.metrics$id_hh=="DOG063601",]
+
+# save(usage.metrics, file = "daily_use_loggers.rdata")
+
+# save(usage.metrics.by.month, file="usage_metrics_stratified.rdata")
+```
+
+
+
+
+
+
+
+## Conclusions
+
+
+
+# Discussion
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r, echo = FALSE, eval=FALSE}
+
+
+for(id in tests$id_hh){
+  
+  same <- 0
+  
+  # cat("Household ", id, " \n")
+  # cat("Overall Progress:", round(which(unique(tests$id_hh)==id)/length(unique(tests$id_hh))*100, 2), " \n")
+  
+  start.xa <- 1
+  start.ya <- 1
+  start.za <- 1
+  
+  start.xt <- 1
+  start.yt <- 1
+  start.zt <- 1
+  
+  for(i in 2:nrow(tests[tests$id_hh==id,])){
+  
+     cumsum.xa <- cumsum(tests[tests$id_hh==id,"accel_x_g"][start.xa:{i-1}])
+     runmean.xa <- cumsum.xa[length(cumsum.xa)] / length(cumsum.xa)
+     current.value.xa <- tests[tests$id_hh==id,"accel_x_g"][i]
+     # (abs(current.value.xa-runmean.xa)>0.25)
+     
+     cumsum.ya <- cumsum(tests[tests$id_hh==id,"accel_y_g"][start.ya:{i-1}])
+     runmean.ya <- cumsum.ya[length(cumsum.ya)] / length(cumsum.ya)
+     current.value.ya <- tests[tests$id_hh==id,"accel_y_g"][i]
+     # (abs(current.value.ya-runmean.ya)>0.25)
+     
+     cumsum.za <- cumsum(tests[tests$id_hh==id,"accel_z_g"][start.za:{i-1}])
+     runmean.za <- cumsum.za[length(cumsum.za)] / length(cumsum.za)
+     current.value.za <- tests[tests$id_hh==id,"accel_z_g"][i]
+     # (abs(current.value.za-runmean.za)>0.25)
+     
+     # i=i+1
+     
+     if(abs(current.value.xa-runmean.xa)>cutoff.accel.x){
+       tests[tests$id_hh==id,"change.xa"][i] <- "yes"
+       start.xa <- i
+     }
+     
+     if(abs(current.value.ya-runmean.ya)>cutoff.accel.y){
+       tests[tests$id_hh==id,"change.ya"][i] <- "yes"
+       start.ya <- i
+     }
+     
+     if(abs(current.value.za-runmean.za)>cutoff.accel.z){
+       tests[tests$id_hh==id,"change.za"][i] <- "yes"
+       start.za <- i
+     }
+     
+     
+     
+     cumsum.xt <- cumsum(tests[tests$id_hh==id,"tilt_x_d"][start.xt:{i-1}])
+     runmean.xt <- cumsum.xt[length(cumsum.xt)] / length(cumsum.xt)
+     current.value.xt <- tests[tests$id_hh==id,"tilt_x_d"][i]
+     
+     cumsum.yt <- cumsum(tests[tests$id_hh==id,"tilt_y_d"][start.yt:{i-1}])
+     runmean.yt <- cumsum.yt[length(cumsum.yt)] / length(cumsum.yt)
+     current.value.yt <- tests[tests$id_hh==id,"tilt_y_d"][i]
+     
+     cumsum.zt <- cumsum(tests[tests$id_hh==id,"tilt_z_d"][start.zt:{i-1}])
+     runmean.zt <- cumsum.zt[length(cumsum.zt)] / length(cumsum.zt)
+     current.value.zt <- tests[tests$id_hh==id,"tilt_z_d"][i]
+    
+     
+     if(abs(current.value.xt-runmean.xt)>cutoff.tilt.x){
+       tests[tests$id_hh==id,"change.xt"][i] <- "yes"
+       start.xt <- i
+     }
+     
+     if(abs(current.value.yt-runmean.yt)>cutoff.tilt.y){
+       tests[tests$id_hh==id,"change.yt"][i] <- "yes"
+       start.yt <- i
+     }
+     
+     if(abs(current.value.zt-runmean.zt)>cutoff.tilt.z){
+       tests[tests$id_hh==id,"change.zt"][i] <- "yes"
+       start.zt <- i
+     }
+     
+     
+     
+     if(hour(tests[tests$id_hh==id,"date_bf_full"][i-1])==12 & same==0){
+      tests[tests$id_hh==id,"day"][i:nrow(tests[tests$id_hh==id,])] <- tests[tests$id_hh==id,"day"][{i}] + 1
+      same <- 1
+    }else{same <- 0}
+
+     cat(i, " of ", nrow(tests[tests$id_hh==id,]), " (", round(i/nrow(tests[tests$id_hh==id,])*100,2)," %) \n")
+   
+  }
+}
+
+tests$any.change <- ifelse(tests$change.xa=="yes" | tests$change.xt=="yes" | tests$change.ya=="yes" | tests$change.yt=="yes" | tests$change.za=="yes" | tests$change.zt=="yes", "yes", "no")
+
+
+
+
+usage <- tests %>% 
+  group_by(id_hh, day) %>% 
+  summarise(uses.any = sum(any.change=="yes"), 
+            uses.xa = sum(change.xa=="yes"), uses.xt = sum(change.xt=="yes"),
+            uses.ya = sum(change.ya=="yes"), uses.yt = sum(change.yt=="yes"),
+            uses.za = sum(change.za=="yes"), uses.zt = sum(change.zt=="yes")) %>%
+  mutate(usage.any = ifelse(uses.any >= 1, 1, 0),
+         usage.xa = ifelse(uses.xa >= 1, 1, 0), usage.xt = ifelse(uses.xt >= 1, 1, 0),
+         usage.ya = ifelse(uses.ya >= 1, 1, 0), usage.yt = ifelse(uses.yt >= 1, 1, 0),
+         usage.za = ifelse(uses.za >= 1, 1, 0), usage.zt = ifelse(uses.zt >= 1, 1, 0)) 
+
+usage.metrics <- usage %>%
+  group_by(id_hh) %>%
+  summarise(usage.any = sum(usage.any) / max(day),
+            usage.xa = sum(usage.xa) / max(day), usage.xt = sum(usage.xt) / max(day),
+            usage.ya = sum(usage.ya) / max(day), usage.yt = sum(usage.yt) / max(day),
+            usage.za = sum(usage.za) / max(day), usage.zt = sum(usage.zt) / max(day)) %>%
+  rbind(c(id_hh="_all", as.list(colSums(usage[,10:16])/nrow(usage))))
+
+
+
+cutoff.accel.x <- 0.75
+cutoff.tilt.x <- 135
+cutoff.accel.y <- 0.75
+cutoff.tilt.y <- 135
+cutoff.accel.z <- 0.75
+cutoff.tilt.z <- 135
+    
+tests$change.xa <- "no"
+tests$change.ya <- "no"
+tests$change.za <- "no"
+    
+tests$change.xt <- "no"
+tests$change.yt <- "no"
+tests$change.zt <- "no"
+    
+  
+
+for(letter in letters[1:5]){
+  
+  start.xa <- 1
+  start.ya <- 1
+  start.za <- 1
+  
+  start.xt <- 1
+  start.yt <- 1
+  start.zt <- 1
+  
+  for(i in 2:nrow(tests[tests$test==letter,])){
+  
+     cumsum.xa <- cumsum(tests[tests$test==letter,"accel_x_g"][start.xa:{i-1}])
+     runmean.xa <- cumsum.xa[length(cumsum.xa)] / length(cumsum.xa)
+     current.value.xa <- tests[tests$test==letter,"accel_x_g"][i]
+     # (abs(current.value.xa-runmean.xa)>0.25)
+     
+     cumsum.ya <- cumsum(tests[tests$test==letter,"accel_y_g"][start.ya:{i-1}])
+     runmean.ya <- cumsum.ya[length(cumsum.ya)] / length(cumsum.ya)
+     current.value.ya <- tests[tests$test==letter,"accel_y_g"][i]
+     # (abs(current.value.ya-runmean.ya)>0.25)
+     
+     cumsum.za <- cumsum(tests[tests$test==letter,"accel_z_g"][start.za:{i-1}])
+     runmean.za <- cumsum.za[length(cumsum.za)] / length(cumsum.za)
+     current.value.za <- tests[tests$test==letter,"accel_z_g"][i]
+     # (abs(current.value.za-runmean.za)>0.25)
+     
+     # i=i+1
+     
+     if(abs(current.value.xa-runmean.xa)>cutoff.accel.x){
+       tests[tests$test==letter,"change.xa"][i] <- "yes"
+       start.xa <- i
+     }
+     
+     if(abs(current.value.ya-runmean.ya)>cutoff.accel.y){
+       tests[tests$test==letter,"change.ya"][i] <- "yes"
+       start.ya <- i
+     }
+     
+     if(abs(current.value.za-runmean.za)>cutoff.accel.z){
+       tests[tests$test==letter,"change.za"][i] <- "yes"
+       start.za <- i
+     }
+     
+     
+     
+     cumsum.xt <- cumsum(tests[tests$test==letter,"tilt_x_d"][start.xt:{i-1}])
+     runmean.xt <- cumsum.xt[length(cumsum.xt)] / length(cumsum.xt)
+     current.value.xt <- tests[tests$test==letter,"tilt_x_d"][i]
+     
+     cumsum.yt <- cumsum(tests[tests$test==letter,"tilt_y_d"][start.yt:{i-1}])
+     runmean.yt <- cumsum.yt[length(cumsum.yt)] / length(cumsum.yt)
+     current.value.yt <- tests[tests$test==letter,"tilt_y_d"][i]
+     
+     cumsum.zt <- cumsum(tests[tests$test==letter,"tilt_z_d"][start.zt:{i-1}])
+     runmean.zt <- cumsum.zt[length(cumsum.zt)] / length(cumsum.zt)
+     current.value.zt <- tests[tests$test==letter,"tilt_z_d"][i]
+    
+     
+     if(abs(current.value.xt-runmean.xt)>cutoff.tilt.x){
+       tests[tests$test==letter,"change.xt"][i] <- "yes"
+       start.xt <- i
+     }
+     
+     if(abs(current.value.yt-runmean.yt)>cutoff.tilt.y){
+       tests[tests$test==letter,"change.yt"][i] <- "yes"
+       start.yt <- i
+     }
+     
+     if(abs(current.value.zt-runmean.zt)>cutoff.tilt.z){
+       tests[tests$test==letter,"change.zt"][i] <- "yes"
+       start.zt <- i
+   }
+   
+  }
+}
+
+tests$any.change <- ifelse(tests$change.xa=="yes" | tests$change.xt=="yes" | tests$change.ya=="yes" | tests$change.yt=="yes" | tests$change.za=="yes" | tests$change.zt=="yes", "yes", "no")
+
+
+
+
+raw.accuracy <- sum(tests$change==tests$any.change) / nrow(tests)
+raw.sensitivity <- sum(tests$any.change[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity <- sum(tests$any.change[tests$change=="no"]=="no") / sum(tests$change=="no")
+
+raw.accuracy.xa <- sum(tests$change==tests$change.xa) / nrow(tests)
+raw.sensitivity.xa <- sum(tests$change.xa[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity.xa <- sum(tests$change.xa[tests$change=="no"]=="no") / sum(tests$change=="no")
+raw.accuracy.xt <- sum(tests$change==tests$change.xt) / nrow(tests)
+raw.sensitivity.xt <- sum(tests$change.xt[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity.xt <- sum(tests$change.xt[tests$change=="no"]=="no") / sum(tests$change=="no")
+
+raw.accuracy.ya <- sum(tests$change==tests$change.ya) / nrow(tests)
+raw.sensitivity.ya <- sum(tests$change.ya[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity.ya <- sum(tests$change.ya[tests$change=="no"]=="no") / sum(tests$change=="no")
+raw.accuracy.yt <- sum(tests$change==tests$change.yt) / nrow(tests)
+raw.sensitivity.yt <- sum(tests$change.yt[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity.yt <- sum(tests$change.yt[tests$change=="no"]=="no") / sum(tests$change=="no")
+
+raw.accuracy.za <- sum(tests$change==tests$change.za) / nrow(tests)
+raw.sensitivity.za <- sum(tests$change.za[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity.za <- sum(tests$change.za[tests$change=="no"]=="no") / sum(tests$change=="no")
+raw.accuracy.zt <- sum(tests$change==tests$change.zt) / nrow(tests)
+raw.sensitivity.zt <- sum(tests$change.zt[tests$change=="yes"]=="yes") / sum(tests$change=="yes")
+raw.specificity.zt <- sum(tests$change.zt[tests$change=="no"]=="no") / sum(tests$change=="no")
+
+
+
+acc.metrics <- tests %>% group_by(test) %>% summarise(acc = sum(change==any.change) / n(),
+                                                      sens = sum(any.change[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec = sum(any.change[change=="no"]=="no") / sum(change=="no"),
+
+                                                      acc.xa = sum(change==change.xa) / n(),
+                                                      sens.xa = sum(change.xa[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec.xa = sum(change.xa[change=="no"]=="no") / sum(change=="no"),
+                                                      acc.xt = sum(change==change.xt) / n(),
+                                                      sens.xt = sum(change.xt[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec.xt = sum(change.xt[change=="no"]=="no") / sum(change=="no"),
+
+                                                      acc.ya = sum(change==change.xa) / n(),
+                                                      sens.ya = sum(change.ya[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec.ya = sum(change.ya[change=="no"]=="no") / sum(change=="no"),
+                                                      acc.yt = sum(change==change.yt) / n(),
+                                                      sens.yt = sum(change.yt[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec.yt = sum(change.yt[change=="no"]=="no") / sum(change=="no"),
+
+                                                      acc.za = sum(change==change.za) / n(),
+                                                      sens.za = sum(change.za[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec.za = sum(change.za[change=="no"]=="no") / sum(change=="no"),
+                                                      acc.zt = sum(change==change.zt) / n(),
+                                                      sens.zt = sum(change.zt[change=="yes"]=="yes") / sum(change=="yes"),
+                                                      spec.zt = sum(change.zt[change=="no"]=="no") / sum(change=="no"))
+
+acc.metrics[nrow(acc.metrics)+1,] <- list("_any",
+                                          raw.accuracy, raw.sensitivity, raw.specificity,
+                                          raw.accuracy.xa, raw.sensitivity.xa, raw.specificity.xa,
+                                          raw.accuracy.xt, raw.sensitivity.xt, raw.specificity.xt,
+                                          raw.accuracy.ya, raw.sensitivity.ya, raw.specificity.ya,
+                                          raw.accuracy.yt, raw.sensitivity.yt, raw.specificity.yt,
+                                          raw.accuracy.za, raw.sensitivity.za, raw.specificity.za,
+                                          raw.accuracy.zt, raw.sensitivity.zt, raw.specificity.zt)
+
+
+usage <- tests %>% 
+  group_by(test, day) %>% 
+  summarise(gt.uses = sum(change=="yes"), uses.any = sum(any.change=="yes"), 
+            uses.xa = sum(change.xa=="yes"), uses.xt = sum(change.xt=="yes"),
+            uses.ya = sum(change.ya=="yes"), uses.yt = sum(change.yt=="yes"),
+            uses.za = sum(change.za=="yes"), uses.zt = sum(change.zt=="yes")) %>%
+  mutate(usage.gt = ifelse(gt.uses>=2, 1, 0),
+         usage.any = ifelse(uses.any >= 2, 1, 0),
+         usage.xa = ifelse(uses.xa >= 2, 1, 0), usage.xt = ifelse(uses.xt >= 2, 1, 0),
+         usage.ya = ifelse(uses.ya >= 2, 1, 0), usage.yt = ifelse(uses.yt >= 2, 1, 0),
+         usage.za = ifelse(uses.za >= 2, 1, 0), usage.zt = ifelse(uses.zt >= 2, 1, 0)) 
+
+usage.metrics <- usage %>%
+  group_by(test) %>%
+  summarise(usage.gt = sum(usage.gt) / max(day), 
+            usage.any = sum(usage.any) / max(day),
+            usage.xa = sum(usage.xa) / max(day), usage.xt = sum(usage.xt) / max(day),
+            usage.ya = sum(usage.ya) / max(day), usage.yt = sum(usage.yt) / max(day),
+            usage.za = sum(usage.za) / max(day), usage.zt = sum(usage.zt) / max(day)) %>%
+  rbind(c(test="_all", as.list(colSums(usage[,11:18])/nrow(usage))))
+
+
+
+rw.Cutoffs <- function(seed=74, tau=1, mcruns=1000, index.sens=1, index.spec=2){
+
+    set.seed(seed)
+    tau <<- tau
+    cutoff.accel.chain <- rep(NA, mcruns)
+    cutoff.tilt.chain <- rep(NA, mcruns)
+    
+    accept <- rep(NA,mcruns)
+    alphachain <- rep(NA, mcruns)
+    
+    sensitivity <- rep(NA,mcruns)
+    specificity <- rep(NA,mcruns)
+    
+    
+    cutoff.accel.chain[1] <- 0.25
+    cutoff.tilt.chain[1] <- 45
+    sensitivity[1] <- get.Accuracy.metrics(rep(c(0.25, 45),3))[index.sens]
+    specificity[1] <- get.Accuracy.metrics(rep(c(0.25, 45),3))[index.spec]
+    
+    
+    for(mc in 2:mcruns){
+      current.cutoffs = c(cutoff.accel.chain[mc-1], cutoff.tilt.chain[mc-1])
+    
+      prop.cutoffs = c(rnorm(1, cutoff.accel.chain[mc-1], 0.025),  #rgamma runif(1, min=0, max=3)
+                       rnorm(1, cutoff.tilt.chain[mc-1], 5)) #rcauchy runif(1, min=0, max=2)
+      
+      current.metrics <- get.Accuracy.metrics(rep(current.cutoffs, 3))[index.sens:index.spec]
+      prop.metrics <- get.Accuracy.metrics(rep(prop.cutoffs,3))[index.sens:index.spec]
+      
+      alphanum = mylikelihoodTimesPrior(prop.metrics)
+      alphaden = mylikelihoodTimesPrior(current.metrics)
+      
+      alpha = min(1, alphanum/alphaden)
+      alphachain[mc] = alpha
+      myunif = runif(1)
+      
+      if(myunif < alpha){
+        accept[mc] = 1
+        cutoff.accel.chain[mc] = prop.cutoffs[1]
+        cutoff.tilt.chain[mc] = prop.cutoffs[2]
+        sensitivity[mc] = prop.metrics[1]
+        specificity[mc] = prop.metrics[2]
+      }
+      if(myunif > alpha){
+        accept[mc] = 0
+        cutoff.accel.chain[mc] = current.cutoffs[1]
+        cutoff.tilt.chain[mc] = current.cutoffs[2]
+        sensitivity[mc] = current.metrics[1]
+        specificity[mc] = current.metrics[2]
+      }
+      cat(round(mc/mcruns*100,2), "% \n")
+    }
+    
+    return(list(cutoff.accel.chain=cutoff.accel.chain, cutoff.tilt.chain=cutoff.tilt.chain, 
+                alphachain=alphachain, accept=accept, mcruns=mcruns, 
+                sensitivity=sensitivity, specificity=specificity))
+
+}
+
+rw.all <- rw.Cutoffs(seed = as.numeric(Sys.time()), mcruns = 1000, index.sens = 1, index.spec = 2)
+
+rw.accel.x <- rw.Cutoffs(seed = as.numeric(Sys.time()), mcruns = 1000, index.sens = 3, index.spec = 4)
+rw.tilt.x <- rw.Cutoffs(seed = as.numeric(Sys.time()), mcruns = 1000, index.sens = 5, index.spec = 6)
+rw.accel.y <- rw.Cutoffs(seed = as.numeric(Sys.time()), mcruns = 1000, index.sens = 7, index.spec = 8)
+rw.tilt.y <- rw.Cutoffs(seed = as.numeric(Sys.time()), mcruns = 1000, index.sens = 9, index.spec = 10)
+rw.accel.z <- rw.Cutoffs(seed = as.numeric(Sys.time()), mcruns = 1000, index.sens = 11, index.spec = 12)
+rw.tilt.z <- rw.Cutoffs(seed = as.numeric(Sys.time()), mcruns = 1000, index.sens = 13, index.spec = 14)
+
+
+rw.Diagnostics <- function(rw){
+  cutoff.accel.chain <- rw$cutoff.accel.chain
+  cutoff.tilt.chain <- rw$cutoff.tilt.chain
+  alphachain <- rw$alphachain
+  accept <- rw$accept
+  mcruns <- rw$mcruns
+
+
+plot(cutoff.accel.chain, type="l")
+plot(cutoff.tilt.chain, type="l")
+
+par(mfrow=c(2,1))
+plot(alphachain, type="l")
+plot.new()
+text(0.5, 0.5, paste("Acceptance Proportion = ", sum(accept[2:length(accept)])/mcruns)) #~20-30%
+
+hist(cutoff.accel.chain)
+hist(cutoff.tilt.chain)
+
+accel.run.mean <- cumsum(cutoff.accel.chain)/1:mcruns
+tilt.run.mean <- cumsum(cutoff.tilt.chain)/1:mcruns
+
+plot(accel.run.mean, type="l")
+plot(tilt.run.mean, type="l")
+
+acf(accel.run.mean) 
+acf(tilt.run.mean)
+}
+
+
+rw.Diagnostics(rw.all)
+rw.Diagnostics(rw.accel.x)
+rw.Diagnostics(rw.tilt.x)
+rw.Diagnostics(rw.accel.y)
+rw.Diagnostics(rw.tilt.y)
+rw.Diagnostics(rw.accel.z)
+rw.Diagnostics(rw.tilt.z)
+```
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,62 @@
+---
+title: "Journal of Walkthroughs"
+subtitle: <center><figure><img src=/files/images/jow_logo_cropped.png alt="Journal of Walkthroughs"></figure></center>
+---
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Mansalva&display=swap');
+</style>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Mansalva&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+</style>
+
+# Welcome! Bienvenue! Bienvenidos! Willkommen! Bem-vindos! {.unlisted .unnumbered}
+
+
+This is the ***Journal of Walkthroughs***, aka my version of those data science blogs you will find all over the internet / a way for me to play around with creating websites.
+
+
+## Content
+
+Check out **About** for a little more detail on what you can expect to find. 
+
+Check out **Beginner**, **Intermediate**, **Advanced** sections for the *walkthroughs*. 
+
+
+
+
+## Contributing
+
+If you have a document that you think fits this general purpose / design or would like to create one, feel free to reach out to me and we can discuss adding it to the repository. If I remember, I will create a `Beginner` document containing information on the structuring / outline of *Walkthroughs* that I would like to remain consistent. 
+
+
+
+### List of Contributors
+
+[Cody Dailey](https://daileyco.github.io) (just me for now)
+
+
+
+
+
+## Attributions
+
+Icon made by [Amethyst prime](https://www.flaticon.com/authors/amethyst-prime) from [Flaticon](https://www.flaticon.com/). 
+
+Logo created by me using [FreeLogo Design](https://www.freelogodesign.org/). 
+
+Within some of the walkthroughs, I may reference out to other resources that have helped me in learning. 
+
+Style and approach (and starting points for some essential files, e.g., `_site.yml`) of website design can be attributed to [Dr. Andreas Handel](https://www.andreashandel.com/).
+
+Color palette sourced from [Coolors](https://coolors.co/582f0e-7f4f24-936639-a68a64-b6ad90-c2c5aa-a4ac86-656d4a-414833-333d29).
+
+CSS modified from [Journal theme](https://bootswatch.com/3/journal/bootstrap.css).
+
+
+
+
+## License
+
+This work is licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
