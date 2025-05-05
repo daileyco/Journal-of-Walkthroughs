@@ -8,8 +8,6 @@ project:
 
 website:
   title: ""
-  site-url: "https://daileyco.github.io/Journal-of-Walkthroughs"
-  repo-url: "https://github.com/daileyco/Journal-of-Walkthroughs"
   favicon: /files/images/research.png
   navbar:
     logo: /files/images/jow_logo_cropped.png
