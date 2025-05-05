@@ -15,12 +15,11 @@ website:
     foreground: "#000000"
     tools:
       - icon: github
-        href: https://daileyco.github.io/Journal-of-Walkthroughs
+        href: https://github.com/daileyco/Journal-of-Walkthroughs
     left:
       - href: index.qmd
         text: Home
       - href: about.qmd
-        text: About
       - text: Walkthroughs
         menu: 
           - text: Beginner
